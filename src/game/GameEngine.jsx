@@ -5,6 +5,7 @@ import { audio } from '../utils/audio';
 
 function GameEngine({
   selectedCar,
+  carUpgrades,
   weatherMode,
   timeOfDay,
   onGameOver,
@@ -56,6 +57,7 @@ function GameEngine({
 
     // Instantiate game loop
     const gameLoop = new GameLoop(canvas, selectedCar, {
+      carUpgrades,
       weatherMode,
       timeOfDay,
       onGameOver,

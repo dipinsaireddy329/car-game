@@ -7,14 +7,14 @@ import GameDashboard from './components/GameDashboard';
 import GameEngine from './game/GameEngine';
 import { audio } from './utils/audio';
 
-// Available Cars Database
+// Expanded Cars Database
 export const CARS = [
   {
     id: 'roadster',
     name: 'Cyber Roadster',
     description: 'Sleek starter machine built for cyber grid cruising. Balanced dynamics.',
-    speed: 75,
-    handling: 85,
+    speed: 65,
+    handling: 75,
     perkName: 'E-Magnet Plus',
     perkDesc: 'Coin attraction magnet lasts 30% longer.',
     color: '#00f0ff', // neon cyan
@@ -25,8 +25,8 @@ export const CARS = [
     id: 'cruiser',
     name: 'Neon Cruiser',
     description: 'Armored heavy-duty patrol racer. Higher endurance and shields.',
-    speed: 65,
-    handling: 65,
+    speed: 55,
+    handling: 60,
     perkName: 'Shield Capacitor',
     perkDesc: 'Starts game with a shielding field active.',
     color: '#9d4edd', // neon purple
@@ -37,7 +37,7 @@ export const CARS = [
     id: 'police',
     name: 'Future Interceptor',
     description: 'Special taskforce pursuit vehicle. Optimized for data collection.',
-    speed: 85,
+    speed: 80,
     handling: 70,
     perkName: 'Data Double',
     perkDesc: 'All network coins collected are worth double value.',
@@ -49,13 +49,37 @@ export const CARS = [
     id: 'demon',
     name: 'Speed Demon',
     description: 'Prototype racing chassis. Extremely high speed. Dangerous output.',
-    speed: 100,
-    handling: 95,
+    speed: 95,
+    handling: 85,
     perkName: 'Nitro Burst',
     perkDesc: 'Nitro refills and charges 50% faster.',
     color: '#ff007f', // neon pink
     price: 500,
     trail: 'rgba(255, 0, 127, 0.4)'
+  },
+  {
+    id: 'sentinel',
+    name: 'Sentinel Truck',
+    description: 'Massive heavy truck. Has 4 lives instead of 3. Drains energy slower.',
+    speed: 50,
+    handling: 50,
+    perkName: 'Heavy Armor',
+    perkDesc: 'Starts with 4 lives. Energy cell decays 25% slower.',
+    color: '#39ff14', // neon green
+    price: 750,
+    trail: 'rgba(57, 255, 20, 0.4)'
+  },
+  {
+    id: 'phantom',
+    name: 'Hyper Phantom',
+    description: 'Experimental phase vehicle. Attracts energy cells as well as coins.',
+    speed: 90,
+    handling: 95,
+    perkName: 'Cell Attractor',
+    perkDesc: 'Magnets attract fuel energy canisters in addition to coins.',
+    color: '#ffffff', // bright white
+    price: 1000,
+    trail: 'rgba(255, 255, 255, 0.4)'
   }
 ];
 
@@ -65,6 +89,14 @@ function App() {
   const [highScore, setHighScore] = useState(0);
   const [coins, setCoins] = useState(0);
   const [unlockedCars, setUnlockedCars] = useState(['roadster']);
+  const [upgrades, setUpgrades] = useState({
+    roadster: { speed: 1, handling: 1 },
+    cruiser: { speed: 1, handling: 1 },
+    police: { speed: 1, handling: 1 },
+    demon: { speed: 1, handling: 1 },
+    sentinel: { speed: 1, handling: 1 },
+    phantom: { speed: 1, handling: 1 }
+  });
   
   // Game metrics (sent from Canvas Game Loop)
   const [score, setScore] = useState(0);
@@ -87,6 +119,7 @@ function App() {
     const savedHighScore = localStorage.getItem('neon_racer_high_score');
     const savedCoins = localStorage.getItem('neon_racer_total_coins');
     const savedUnlocked = localStorage.getItem('neon_racer_unlocked_cars');
+    const savedUpgrades = localStorage.getItem('neon_racer_upgrades');
     const savedMuted = localStorage.getItem('neon_racer_muted');
 
     if (savedHighScore) setHighScore(parseInt(savedHighScore, 10));
@@ -96,6 +129,13 @@ function App() {
         setUnlockedCars(JSON.parse(savedUnlocked));
       } catch (e) {
         setUnlockedCars(['roadster']);
+      }
+    }
+    if (savedUpgrades) {
+      try {
+        setUpgrades(JSON.parse(savedUpgrades));
+      } catch (e) {
+        // use default
       }
     }
     if (savedMuted === 'true') {
@@ -111,11 +151,9 @@ function App() {
       audio.startEngine();
     } else {
       audio.stopEngine();
-      // Keep music in menus unless desired otherwise, or stop it
       if (gameState === 'GAME_OVER') {
         audio.stopMusic();
       } else {
-        // Start or stop music in Main Menu based on mute
         if (!muted && (gameState === 'MENU' || gameState === 'SELECT_CAR')) {
           audio.startMusic();
         }
@@ -137,10 +175,14 @@ function App() {
     audio.playClick();
     setScore(0);
     setSessionCoins(0);
-    setLives(3);
+    
+    // Sentinel has 4 lives, others have 3
+    const startLives = selectedCar.id === 'sentinel' ? 4 : 3;
+    setLives(startLives);
+    
     setFuel(100);
     setNitro(0);
-    setActiveShield(selectedCar.id === 'cruiser'); // Cruiser starts with shield
+    setActiveShield(selectedCar.id === 'cruiser'); 
     setActiveMagnet(false);
     setGameState('PLAYING');
   };
@@ -155,17 +197,44 @@ function App() {
       
       localStorage.setItem('neon_racer_total_coins', newCoins.toString());
       localStorage.setItem('neon_racer_unlocked_cars', JSON.stringify(newUnlocked));
-      audio.playShield(); // positive chime
+      audio.playShield(); // play positive notification sound
       return true;
     }
     audio.playClick();
     return false;
   };
 
+  const handleUpgrade = (carId, stat) => {
+    const currentLevel = upgrades[carId]?.[stat] || 1;
+    if (currentLevel >= 5) return; // Max level reached
+
+    const cost = currentLevel * 50; // Level 1->2 costs 50, 2->3 costs 100, etc.
+    if (coins >= cost) {
+      const newCoins = coins - cost;
+      const newCarUpgrades = {
+        ...upgrades[carId],
+        [stat]: currentLevel + 1
+      };
+      const newUpgrades = {
+        ...upgrades,
+        [carId]: newCarUpgrades
+      };
+
+      setCoins(newCoins);
+      setUpgrades(newUpgrades);
+
+      localStorage.setItem('neon_racer_total_coins', newCoins.toString());
+      localStorage.setItem('neon_racer_upgrades', JSON.stringify(newUpgrades));
+      audio.playShield(); // successful chime
+    } else {
+      audio.playClick(); // error clicking
+    }
+  };
+
   const handleGameOver = (finalScore, finalCoins) => {
     audio.playCrash();
     
-    // Apply Interceptor perk (Double Coins)
+    // Interceptor double coin perk
     const processedCoins = selectedCar.id === 'police' ? finalCoins * 2 : finalCoins;
     
     const newCoinsBank = coins + processedCoins;
@@ -243,6 +312,8 @@ function App() {
               selectedCar={selectedCar}
               setSelectedCar={setSelectedCar}
               unlockedCars={unlockedCars}
+              upgrades={upgrades}
+              onUpgrade={handleUpgrade}
               totalCoins={coins}
               onBuy={handleBuyCar}
               onBack={() => {
@@ -266,6 +337,7 @@ function App() {
             {/* Canvas Game Engine */}
             <GameEngine
               selectedCar={selectedCar}
+              carUpgrades={upgrades[selectedCar.id] || { speed: 1, handling: 1 }}
               weatherMode={weatherMode}
               timeOfDay={timeOfDay}
               onGameOver={handleGameOver}
