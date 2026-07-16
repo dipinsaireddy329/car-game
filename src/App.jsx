@@ -7,7 +7,7 @@ import GameDashboard from './components/GameDashboard';
 import GameEngine from './game/GameEngine';
 import { audio } from './utils/audio';
 
-// Expanded Cars Database
+// Expanded Cars Database (8 Vehicles: Added Street Racers Apex GT and Carbon Cobra)
 export const CARS = [
   {
     id: 'roadster',
@@ -34,6 +34,18 @@ export const CARS = [
     trail: 'rgba(157, 78, 221, 0.4)'
   },
   {
+    id: 'gt',
+    name: 'Apex GT',
+    description: 'Street-tuned import drift racer. Equipped with performance nitro-drift tires.',
+    speed: 80,
+    handling: 88,
+    perkName: 'Tuning Drift',
+    perkDesc: 'Vehicle lateral handling increases by 15% during active Nitro boosts.',
+    color: '#ff5722', // neon orange
+    price: 300,
+    trail: 'rgba(255, 87, 34, 0.4)'
+  },
+  {
     id: 'police',
     name: 'Future Interceptor',
     description: 'Special taskforce pursuit vehicle. Optimized for data collection.',
@@ -42,8 +54,20 @@ export const CARS = [
     perkName: 'Data Double',
     perkDesc: 'All network coins collected are worth double value.',
     color: '#ffd700', // neon yellow
-    price: 300,
+    price: 450,
     trail: 'rgba(255, 215, 0, 0.4)'
+  },
+  {
+    id: 'cobra',
+    name: 'Carbon Cobra',
+    description: 'Classic heavy muscle street racer. Built for raw speed and ramming force.',
+    speed: 88,
+    handling: 62,
+    perkName: 'Ram Charger',
+    perkDesc: 'Hitting traffic during active Nitro crushes obstacles for +200 points without crashing.',
+    color: '#e91e63', // hot pink
+    price: 600,
+    trail: 'rgba(233, 30, 99, 0.4)'
   },
   {
     id: 'demon',
@@ -54,19 +78,19 @@ export const CARS = [
     perkName: 'Nitro Burst',
     perkDesc: 'Nitro refills and charges 50% faster.',
     color: '#ff007f', // neon pink
-    price: 500,
+    price: 750,
     trail: 'rgba(255, 0, 127, 0.4)'
   },
   {
     id: 'sentinel',
     name: 'Sentinel Truck',
-    description: 'Massive heavy truck. Has 4 lives instead of 3. Drains energy slower.',
+    description: 'Massive armored truck. Has 4 lives instead of 3. Drains energy slower.',
     speed: 50,
     handling: 50,
     perkName: 'Heavy Armor',
     perkDesc: 'Starts with 4 lives. Energy cell decays 25% slower.',
     color: '#39ff14', // neon green
-    price: 750,
+    price: 900,
     trail: 'rgba(57, 255, 20, 0.4)'
   },
   {
@@ -78,7 +102,7 @@ export const CARS = [
     perkName: 'Cell Attractor',
     perkDesc: 'Magnets attract fuel energy canisters in addition to coins.',
     color: '#ffffff', // bright white
-    price: 1000,
+    price: 1100,
     trail: 'rgba(255, 255, 255, 0.4)'
   }
 ];
@@ -92,7 +116,9 @@ function App() {
   const [upgrades, setUpgrades] = useState({
     roadster: { speed: 1, handling: 1 },
     cruiser: { speed: 1, handling: 1 },
+    gt: { speed: 1, handling: 1 },
     police: { speed: 1, handling: 1 },
+    cobra: { speed: 1, handling: 1 },
     demon: { speed: 1, handling: 1 },
     sentinel: { speed: 1, handling: 1 },
     phantom: { speed: 1, handling: 1 }
@@ -197,7 +223,7 @@ function App() {
       
       localStorage.setItem('neon_racer_total_coins', newCoins.toString());
       localStorage.setItem('neon_racer_unlocked_cars', JSON.stringify(newUnlocked));
-      audio.playShield(); // play positive notification sound
+      audio.playShield();
       return true;
     }
     audio.playClick();
@@ -206,9 +232,9 @@ function App() {
 
   const handleUpgrade = (carId, stat) => {
     const currentLevel = upgrades[carId]?.[stat] || 1;
-    if (currentLevel >= 5) return; // Max level reached
+    if (currentLevel >= 5) return;
 
-    const cost = currentLevel * 50; // Level 1->2 costs 50, 2->3 costs 100, etc.
+    const cost = currentLevel * 50;
     if (coins >= cost) {
       const newCoins = coins - cost;
       const newCarUpgrades = {
@@ -225,9 +251,9 @@ function App() {
 
       localStorage.setItem('neon_racer_total_coins', newCoins.toString());
       localStorage.setItem('neon_racer_upgrades', JSON.stringify(newUpgrades));
-      audio.playShield(); // successful chime
+      audio.playShield();
     } else {
-      audio.playClick(); // error clicking
+      audio.playClick();
     }
   };
 
@@ -332,7 +358,7 @@ function App() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="absolute inset-0 w-full h-full flex"
+            className="absolute inset-0 w-full h-full"
           >
             {/* Canvas Game Engine */}
             <GameEngine

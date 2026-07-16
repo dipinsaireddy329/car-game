@@ -26,9 +26,7 @@ export class GameLoop {
     // Base speed and stats scaling
     this.baseSpeed = 6;
     this.currentSpeed = this.baseSpeed;
-    // Speed increases 8% per upgrade level
     this.maxNormalSpeed = (12 + (carConfig.speed / 100) * 4) * (1 + (speedLvl - 1) * 0.08); 
-    // Handling increases 10% per upgrade level
     this.handlingFactor = (0.07 + (carConfig.handling / 100) * 0.07) * (1 + (handlingLvl - 1) * 0.10);
     
     this.speedRatio = 0;
@@ -38,11 +36,12 @@ export class GameLoop {
     this.fuel = 100;
     this.nitro = 25;
     this.invulnerableTime = 0;
+    this.isBoosting = false;
 
     // Player Positioning
-    this.playerWidth = carConfig.id === 'sentinel' ? 52 : 42; // Sentinel is bulkier
+    this.playerWidth = carConfig.id === 'sentinel' ? 52 : 42; 
     this.playerHeight = carConfig.id === 'sentinel' ? 88 : 78;
-    this.playerLane = 1.5; // Start centered between lane 1 and 2
+    this.playerLane = 1.5; 
     this.playerX = this.getLaneCenterX(this.playerLane) - this.playerWidth / 2;
     this.playerY = this.height - 120;
     
@@ -64,7 +63,7 @@ export class GameLoop {
     this.trafficSpawnTimer = 0;
     this.itemSpawnTimer = 0;
     this.lightningAlpha = 0;
-    this.sirenFlashState = 0; // for flashing lights
+    this.sirenFlashState = 0;
 
     this.isPaused = false;
     this.gameOverTriggered = false;
@@ -81,7 +80,6 @@ export class GameLoop {
   }
 
   initScenery() {
-    // Spawn initial buildings on left and right shoulder
     for (let i = 0; i < 6; i++) {
       const isLeft = i % 2 === 0;
       const w = 35 + Math.random() * 15;
@@ -121,7 +119,6 @@ export class GameLoop {
   update(keys, deltaTime) {
     if (this.isPaused || this.gameOverTriggered) return;
 
-    // Siren lights flasher tick
     this.sirenFlashState = (this.sirenFlashState + 1) % 20;
 
     // 1. Invulnerable timer
@@ -132,10 +129,10 @@ export class GameLoop {
     // 2. Lightning flash tick
     if (this.options.weatherMode === 'rain') {
       if (this.lightningAlpha > 0) {
-        this.lightningAlpha -= deltaTime * 3; // decay rapidly
+        this.lightningAlpha -= deltaTime * 3;
       } else if (Math.random() < 0.003) {
-        this.lightningAlpha = 0.75; // trigger flash
-        audio.playCrash(); // thunder sound rumble
+        this.lightningAlpha = 0.75;
+        audio.playCrash();
       }
     }
 
@@ -171,6 +168,7 @@ export class GameLoop {
 
     // 5. Nitro Boost handling
     const isBoosting = (keys[' '] || keys['Shift']) && this.nitro > 0 && this.fuel > 0;
+    this.isBoosting = isBoosting;
     const chargeMultiplier = this.carConfig.id === 'demon' ? 1.5 : 1.0;
 
     if (isBoosting) {
@@ -201,11 +199,17 @@ export class GameLoop {
     audio.updateEnginePitch(this.currentSpeed / (this.maxNormalSpeed * 1.7));
 
     // 6. Steer Left/Right
+    let currentHandling = this.handlingFactor;
+    // Apply Apex GT tuning drift boost: 15% extra steering responsiveness when boosting nitro
+    if (this.carConfig.id === 'gt' && isBoosting) {
+      currentHandling *= 1.15;
+    }
+
     if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
-      this.playerLane = Math.max(0.08, this.playerLane - this.handlingFactor);
+      this.playerLane = Math.max(0.08, this.playerLane - currentHandling);
     }
     if (keys['ArrowRight'] || keys['d'] || keys['D']) {
-      this.playerLane = Math.min(this.lanesCount - 1.08, this.playerLane + this.handlingFactor);
+      this.playerLane = Math.min(this.lanesCount - 1.08, this.playerLane + currentHandling);
     }
 
     this.playerX = this.getLaneCenterX(this.playerLane) - this.playerWidth / 2;
@@ -300,7 +304,7 @@ export class GameLoop {
     this.ctx.restore();
   }
 
-  // Draw 6 completely unique cyberpunk car graphics
+  // Draw 8 completely unique cyberpunk and street car graphics
   drawPlayer() {
     if (this.invulnerableTime > 0 && Math.floor(Date.now() / 80) % 2 === 0) {
       return;
@@ -318,7 +322,6 @@ export class GameLoop {
     this.ctx.shadowBlur = 15;
 
     if (id === 'roadster') {
-      // Sleek aero-dynamic triangle wedge
       this.ctx.fillStyle = '#0f0f24';
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = 2;
@@ -330,12 +333,10 @@ export class GameLoop {
       this.ctx.fill();
       this.ctx.stroke();
 
-      // Wing flaps
       this.ctx.fillStyle = color;
       this.ctx.fillRect(x - 2, y + h - 25, 4, 20);
       this.ctx.fillRect(x + w - 2, y + h - 25, 4, 20);
 
-      // Cyber core windshield
       this.ctx.fillStyle = 'rgba(0, 240, 255, 0.45)';
       this.ctx.beginPath();
       this.ctx.moveTo(x + w/2, y + 25);
@@ -345,7 +346,6 @@ export class GameLoop {
       this.ctx.fill();
 
     } else if (id === 'cruiser') {
-      // Boxy, armored APC model
       this.ctx.fillStyle = '#120c1f';
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = 2.5;
@@ -354,21 +354,44 @@ export class GameLoop {
       this.ctx.fill();
       this.ctx.stroke();
 
-      // Side shielding plates
       this.ctx.fillStyle = '#080512';
       this.ctx.fillRect(x - 3, y + 15, 3, h - 30);
       this.ctx.fillRect(x + w, y + 15, 3, h - 30);
 
-      // Glowing engine slots
       this.ctx.fillStyle = color;
       this.ctx.fillRect(x + 8, y + h - 6, w - 16, 3);
 
-      // Windshield
       this.ctx.fillStyle = 'rgba(157, 78, 221, 0.4)';
       this.ctx.fillRect(x + 6, y + 25, w - 12, 14);
 
+    } else if (id === 'gt') {
+      // Apex GT: Orange tuner with side skirts, headlights, spoiler
+      this.ctx.fillStyle = '#1f0d06';
+      this.ctx.strokeStyle = color;
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.roundRect(x, y + 4, w, h - 8, 6);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Street neon underglow
+      this.ctx.shadowBlur = 20;
+      this.ctx.fillStyle = 'rgba(255, 87, 34, 0.6)';
+      this.ctx.fillRect(x - 4, y + 20, 4, h - 40);
+      this.ctx.fillRect(x + w, y + 20, 4, h - 40);
+
+      // Tuner spoiler
+      this.ctx.fillStyle = '#111';
+      this.ctx.fillRect(x - 4, y + h - 6, w + 8, 4);
+      this.ctx.fillStyle = color;
+      this.ctx.fillRect(x - 4, y + h - 8, 2, 4);
+      this.ctx.fillRect(x + w + 2, y + h - 8, 2, 4);
+
+      // Cockpit window
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      this.ctx.fillRect(x + 5, y + 22, w - 10, 16);
+
     } else if (id === 'police') {
-      // Pursuit Interceptor styling
       this.ctx.fillStyle = '#0a0d14';
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = 2;
@@ -377,21 +400,41 @@ export class GameLoop {
       this.ctx.fill();
       this.ctx.stroke();
 
-      // Flashing Police Rooftop Siren Bar
       const isRed = this.sirenFlashState < 10;
       this.ctx.shadowBlur = 18;
       this.ctx.shadowColor = isRed ? '#ff003c' : '#0066ff';
       this.ctx.fillStyle = isRed ? '#ff003c' : '#0066ff';
       this.ctx.fillRect(x + w/2 - 12, y + h/2 - 6, 24, 6);
 
-      // White hood logo decal
       this.ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
       this.ctx.beginPath();
       this.ctx.arc(x + w/2, y + 18, 5, 0, Math.PI*2);
       this.ctx.fill();
 
+    } else if (id === 'cobra') {
+      // Carbon Cobra: Pink muscle car with double white stripes down hood
+      this.ctx.fillStyle = '#1c030d';
+      this.ctx.strokeStyle = color;
+      this.ctx.lineWidth = 2.5;
+      this.ctx.beginPath();
+      this.ctx.roundRect(x, y + 2, w, h - 4, 4);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Double racing stripes (white)
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.fillRect(x + w/2 - 6, y + 2, 3, h - 6);
+      this.ctx.fillRect(x + w/2 + 3, y + 2, 3, h - 6);
+
+      // Cowl hood scoop induction
+      this.ctx.fillStyle = '#000000';
+      this.ctx.fillRect(x + w/2 - 4, y + 24, 8, 12);
+
+      // Windshield
+      this.ctx.fillStyle = 'rgba(233, 30, 99, 0.3)';
+      this.ctx.fillRect(x + 5, y + 36, w - 10, 12);
+
     } else if (id === 'demon') {
-      // Aggressive drag racer with sharp spoilers
       this.ctx.fillStyle = '#1c030f';
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = 2;
@@ -405,17 +448,14 @@ export class GameLoop {
       this.ctx.fill();
       this.ctx.stroke();
 
-      // Twin split tail wings
       this.ctx.fillStyle = color;
       this.ctx.fillRect(x - 5, y + h - 18, 6, 15);
       this.ctx.fillRect(x + w - 1, y + h - 18, 6, 15);
 
-      // Fiery exhaust glowing core
       this.ctx.fillStyle = '#ff6600';
       this.ctx.fillRect(x + w/2 - 5, y + h - 5, 10, 4);
 
     } else if (id === 'sentinel') {
-      // Massive heavy rig chassis
       this.ctx.fillStyle = '#061a0b';
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = 3;
@@ -424,18 +464,15 @@ export class GameLoop {
       this.ctx.fill();
       this.ctx.stroke();
 
-      // Heavy bumpers
       this.ctx.fillStyle = '#111';
       this.ctx.fillRect(x - 2, y, w + 4, 8);
       this.ctx.fillRect(x - 2, y + h - 8, w + 4, 8);
 
-      // Glowing grille lines
       this.ctx.fillStyle = color;
       this.ctx.fillRect(x + 10, y + 16, w - 20, 4);
       this.ctx.fillRect(x + 10, y + 24, w - 20, 4);
 
     } else if (id === 'phantom') {
-      // Jetpod/UFO stealth ship
       this.ctx.fillStyle = '#1d1d1f';
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = 2;
@@ -444,7 +481,6 @@ export class GameLoop {
       this.ctx.fill();
       this.ctx.stroke();
 
-      // Pulsing center energy core
       const coreR = 5 + Math.sin(Date.now() / 100) * 2;
       this.ctx.fillStyle = '#fff';
       this.ctx.shadowBlur = 15;
@@ -454,7 +490,7 @@ export class GameLoop {
       this.ctx.fill();
     }
 
-    // Taillights (Red)
+    // Taillights
     if (id !== 'roadster') {
       this.ctx.shadowColor = 'rgba(255, 0, 80, 0.8)';
       this.ctx.fillStyle = 'rgba(255, 0, 80, 0.9)';
@@ -462,7 +498,7 @@ export class GameLoop {
       this.ctx.fillRect(x + w - 10, y + h - 4, 6, 2);
     }
 
-    // Draw active powerups
+    // Active powerups
     if (this.shieldActive) {
       this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.85)';
       this.ctx.shadowColor = 'rgba(0, 240, 255, 0.5)';
@@ -492,17 +528,14 @@ export class GameLoop {
     this.ctx.restore();
   }
 
-  // Draw scrolling buildings and signs on shoulders
   drawScenery() {
     this.scenery.forEach(b => {
       this.ctx.save();
-      // Main block outline
       this.ctx.fillStyle = b.color;
       this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
       this.ctx.fillRect(b.x, b.y, b.width, b.height);
       this.ctx.strokeRect(b.x, b.y, b.width, b.height);
 
-      // Render windows (small grid lights)
       this.ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
       const rows = Math.floor(b.height / 15);
       const cols = Math.floor(b.width / 10);
@@ -519,7 +552,6 @@ export class GameLoop {
         }
       }
 
-      // Draw glowing side billboard
       if (b.signText) {
         this.ctx.shadowColor = b.lightColor;
         this.ctx.shadowBlur = 10;
@@ -528,7 +560,6 @@ export class GameLoop {
         this.ctx.strokeStyle = b.lightColor;
         this.ctx.lineWidth = 1.5;
         
-        // Sign panel
         const sy = b.y + b.height / 2 - 12;
         const sh = 20;
         const sw = b.width + 12;
@@ -539,7 +570,6 @@ export class GameLoop {
         this.ctx.fill();
         this.ctx.stroke();
 
-        // Neon Label
         this.ctx.fillStyle = b.lightColor;
         this.ctx.font = 'bold 9px Orbitron';
         this.ctx.textAlign = 'center';
@@ -549,7 +579,6 @@ export class GameLoop {
     });
   }
 
-  // Draw obstacle traffic
   drawTraffic() {
     this.traffic.forEach(car => {
       this.ctx.save();
@@ -557,7 +586,6 @@ export class GameLoop {
       this.ctx.shadowBlur = 10;
       this.ctx.lineWidth = 1.5;
 
-      // Chassis
       this.ctx.fillStyle = '#0d0d1c';
       this.ctx.strokeStyle = car.color;
       this.ctx.beginPath();
@@ -565,19 +593,16 @@ export class GameLoop {
       this.ctx.fill();
       this.ctx.stroke();
 
-      // Roof headlights (facing down)
       this.ctx.shadowColor = '#fff';
       this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       this.ctx.fillRect(car.x + 5, car.y + car.height - 2, 6, 2);
       this.ctx.fillRect(car.x + car.width - 11, car.y + car.height - 2, 6, 2);
 
-      // Tail lights
       this.ctx.shadowColor = 'rgba(255, 50, 50, 0.5)';
       this.ctx.fillStyle = 'rgba(255, 50, 50, 0.8)';
       this.ctx.fillRect(car.x + 4, car.y, 6, 2);
       this.ctx.fillRect(car.x + car.width - 10, car.y, 6, 2);
 
-      // Flashing siren for traffic police chases
       if (car.isPolice) {
         const isBlue = this.sirenFlashState < 10;
         this.ctx.shadowColor = isBlue ? '#0066ff' : '#ff003c';
@@ -589,7 +614,6 @@ export class GameLoop {
     });
   }
 
-  // Draw floating score strings
   drawFloatingTexts() {
     this.ctx.save();
     this.ctx.font = 'bold 10px Orbitron';
@@ -698,7 +722,6 @@ export class GameLoop {
     }
   }
 
-  // Scenery buildings scroll
   updateScenery() {
     this.scenery.forEach(b => {
       b.y += this.currentSpeed;
@@ -740,7 +763,6 @@ export class GameLoop {
     const x = this.getLaneCenterX(lane) - carWidth / 2;
     const y = -90;
 
-    // 15% chance to spawn a lane-changing car, or a fast police car!
     const roll = Math.random();
     let isLaneChanger = roll < 0.15;
     let isPolice = roll > 0.85;
@@ -773,7 +795,7 @@ export class GameLoop {
       color,
       isLaneChanger,
       isPolice,
-      changeTimer: Math.random() * 3, // lane shift triggers
+      changeTimer: Math.random() * 3,
       targetLane: lane
     });
   }
@@ -812,23 +834,18 @@ export class GameLoop {
     });
   }
 
-  // Update elements position
   updateElements(deltaTime) {
-    // 1. Move Obstacles
     for (let i = this.traffic.length - 1; i >= 0; i--) {
       const car = this.traffic[i];
       car.y += (this.currentSpeed - car.speed);
 
-      // Lane changer AI shifts laterally
       if (car.isLaneChanger) {
         car.changeTimer -= deltaTime;
         if (car.changeTimer <= 0) {
-          car.changeTimer = 2 + Math.random() * 3; // reset timer
-          // Pick left or right lane randomly
+          car.changeTimer = 2 + Math.random() * 3;
           const offset = Math.random() > 0.5 ? 1 : -1;
           const nextLane = Math.max(0, Math.min(this.lanesCount - 1, car.lane + offset));
           
-          // Verify next lane is not blocked
           const laneBlocked = this.traffic.some(tc => tc !== car && tc.lane === nextLane && Math.abs(tc.y - car.y) < 100);
           if (!laneBlocked) {
             car.lane = nextLane;
@@ -836,12 +853,10 @@ export class GameLoop {
           }
         }
 
-        // Interpolate lateral X position
         const targetX = this.getLaneCenterX(car.targetLane) - car.width / 2;
-        car.x += (targetX - car.x) * 0.05; // smooth slide
+        car.x += (targetX - car.x) * 0.05;
       }
 
-      // Near miss validation
       if (!car.nearMissTriggered && car.y > this.playerY && car.y < this.playerY + 30) {
         const lateralDist = Math.abs((car.x + car.width / 2) - (this.playerX + this.playerWidth / 2));
         if (lateralDist < 70) {
@@ -850,7 +865,6 @@ export class GameLoop {
         }
       }
 
-      // Check collision
       if (this.checkCollision(this.playerX, this.playerY, this.playerWidth, this.playerHeight, car.x, car.y, car.width, car.height)) {
         this.handleCrash(car, i);
         continue;
@@ -861,14 +875,11 @@ export class GameLoop {
       }
     }
 
-    // 2. Move & Attract Items
     const magnetRange = 190;
     for (let i = this.items.length - 1; i >= 0; i--) {
       const item = this.items[i];
       item.y += this.currentSpeed;
 
-      // Magnet attraction physics
-      // Phantom perk attracts fuel canisters in addition to coins!
       const attractsThis = item.type === 'COIN' || (this.carConfig.id === 'phantom' && item.type === 'FUEL');
 
       if (this.magnetActive && attractsThis) {
@@ -912,6 +923,28 @@ export class GameLoop {
   handleCrash(trafficCar, index) {
     if (this.invulnerableTime > 0) return;
 
+    // Cobra "Ram Charger" Perk: during Nitro boost speed, crush traffic and add +200 points
+    if (this.carConfig.id === 'cobra' && this.isBoosting) {
+      this.spawnCrashExplosion(trafficCar.x + trafficCar.width / 2, trafficCar.y + trafficCar.height / 2, 'rgba(233, 30, 99, 0.95)', 20);
+      this.traffic.splice(index, 1);
+      
+      this.score += 200;
+      this.options.onScoreUpdate(this.score);
+      audio.playCrash(); 
+
+      this.floatingTexts.push({
+        x: trafficCar.x + trafficCar.width / 2,
+        y: trafficCar.y - 10,
+        text: "+200 RAM DESTROY!",
+        color: '#e91e63',
+        alpha: 1,
+        age: 0
+      });
+
+      this.options.onHit(); 
+      return;
+    }
+
     if (this.shieldActive) {
       this.shieldActive = false;
       this.shieldTimer = 0;
@@ -941,9 +974,6 @@ export class GameLoop {
   }
 
   handleCollectItem(item) {
-    const x = this.playerX + this.playerWidth / 2;
-    const y = this.playerY;
-
     if (item.type === 'COIN') {
       audio.playCoin();
       this.coins += 1;
@@ -1013,7 +1043,6 @@ export class GameLoop {
     this.options.onScoreUpdate(this.score);
     this.spawnNearMissSparkles();
 
-    // Push near miss text trigger
     this.floatingTexts.push({
       x: this.playerX + this.playerWidth / 2,
       y: this.playerY - 20,
@@ -1071,9 +1100,9 @@ export class GameLoop {
   updateFloatingTexts(deltaTime) {
     for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
       const t = this.floatingTexts[i];
-      t.y -= 1.5; // float upwards
+      t.y -= 1.5;
       t.age += deltaTime;
-      t.alpha = Math.max(0, 1.0 - t.age / 0.8); // fade out over 0.8s
+      t.alpha = Math.max(0, 1.0 - t.age / 0.8);
 
       if (t.age >= 0.8) {
         this.floatingTexts.splice(i, 1);

@@ -126,12 +126,12 @@ function GameEngine({
   };
 
   return (
-    <div className="flex-1 h-full flex items-center justify-center relative p-4">
+    <div className="absolute inset-0 w-full h-full flex items-center justify-center p-4 bg-[#020206]/85 z-10">
       {/* Game Canvas Container */}
-      <div className="relative shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-glass-border rounded-lg overflow-hidden bg-[#05050e]">
+      <div className="relative shadow-[0_0_40px_rgba(0,0,0,0.9)] border-2 border-glass-border rounded-xl overflow-hidden bg-[#05050e]">
         <canvas
           ref={canvasRef}
-          className="block max-h-[85vh] aspect-[450/700] object-contain"
+          className="block max-h-[90vh] aspect-[450/700] object-contain"
         />
 
         {/* Pause Overlay Screen */}
