@@ -164,6 +164,7 @@ function GameDashboard({
           <p className="font-bold text-white mb-1">CONTROL PROTOCOLS</p>
           <p className="font-sans leading-relaxed">
             Move: <span className="text-neon-cyan font-display">A / D</span> or <span className="text-neon-cyan font-display">← / →</span><br />
+            Brake: <span className="text-neon-cyan font-display">S / ↓</span><br />
             Boost: <span className="text-neon-cyan font-display">SPACE / SHIFT</span><br />
             Avoid: Traffic blocks<br />
             Collect: fuel cells & credits

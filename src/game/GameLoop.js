@@ -68,6 +68,16 @@ export class GameLoop {
     this.isPaused = false;
     this.gameOverTriggered = false;
 
+    // Realistic Visuals & Controls State
+    this.isBraking = false;
+    this.steerAngle = 0;
+    this.bodyRoll = 0;
+    this.skidMarks = [];
+    this.lastSkidLeftX = undefined;
+    this.lastSkidLeftY = undefined;
+    this.lastSkidRightX = undefined;
+    this.lastSkidRightY = undefined;
+
     // Initialize side scenery & rain
     this.initScenery();
     if (this.options.weatherMode === 'rain') {
@@ -167,7 +177,11 @@ export class GameLoop {
     }
 
     // 5. Nitro Boost handling
-    const isBoosting = (keys[' '] || keys['Shift']) && this.nitro > 0 && this.fuel > 0;
+    const isBraking = (keys['ArrowDown'] || keys['s'] || keys['S']) && this.currentSpeed > 0;
+    this.isBraking = isBraking;
+
+    // You cannot boost while braking
+    const isBoosting = (keys[' '] || keys['Shift']) && this.nitro > 0 && this.fuel > 0 && !isBraking;
     this.isBoosting = isBoosting;
     const chargeMultiplier = this.carConfig.id === 'demon' ? 1.5 : 1.0;
 
@@ -178,6 +192,11 @@ export class GameLoop {
       this.nitro = Math.max(0, this.nitro - 0.5);
       this.currentSpeed = Math.min(this.maxNormalSpeed * 1.7, this.currentSpeed + 0.4);
       this.spawnBoostParticles();
+    } else if (isBraking) {
+      this.nitro = Math.min(100, this.nitro + 0.04 * chargeMultiplier); // charge slower when braking
+      const minSpeed = this.baseSpeed * 0.4;
+      this.currentSpeed = Math.max(minSpeed, this.currentSpeed - 0.45); // rapid slowdown
+      this.spawnBrakeSmokeParticles();
     } else {
       this.nitro = Math.min(100, this.nitro + 0.08 * chargeMultiplier);
       const targetNormal = this.maxNormalSpeed;
@@ -205,11 +224,68 @@ export class GameLoop {
       currentHandling *= 1.15;
     }
 
+    let targetSteer = 0;
+    let targetRoll = 0;
+
     if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
       this.playerLane = Math.max(0.08, this.playerLane - currentHandling);
+      targetSteer = -0.32;
+      targetRoll = -0.045;
     }
     if (keys['ArrowRight'] || keys['d'] || keys['D']) {
       this.playerLane = Math.min(this.lanesCount - 1.08, this.playerLane + currentHandling);
+      targetSteer = 0.32;
+      targetRoll = 0.045;
+    }
+
+    this.steerAngle += (targetSteer - this.steerAngle) * 0.22;
+    this.bodyRoll += (targetRoll - this.bodyRoll) * 0.18;
+
+    // Generate skid marks
+    const isSkidding = this.isBraking || (Math.abs(this.steerAngle) > 0.22 && this.currentSpeed > this.baseSpeed * 0.8);
+    if (isSkidding && this.currentSpeed > 0.8) {
+      const leftX = this.playerX + 6;
+      const rightX = this.playerX + this.playerWidth - 6;
+      const rearY = this.playerY + this.playerHeight - 16;
+
+      if (this.lastSkidLeftX !== undefined) {
+        this.skidMarks.push({
+          x1: this.lastSkidLeftX,
+          y1: this.lastSkidLeftY + this.currentSpeed,
+          x2: leftX,
+          y2: rearY,
+          life: 2.5,
+          maxLife: 2.5
+        });
+        this.skidMarks.push({
+          x1: this.lastSkidRightX,
+          y1: this.lastSkidRightY + this.currentSpeed,
+          x2: rightX,
+          y2: rearY,
+          life: 2.5,
+          maxLife: 2.5
+        });
+      }
+      this.lastSkidLeftX = leftX;
+      this.lastSkidLeftY = rearY;
+      this.lastSkidRightX = rightX;
+      this.lastSkidRightY = rearY;
+    } else {
+      this.lastSkidLeftX = undefined;
+      this.lastSkidLeftY = undefined;
+      this.lastSkidRightX = undefined;
+      this.lastSkidRightY = undefined;
+    }
+
+    // Update skid marks lifecycle
+    for (let i = this.skidMarks.length - 1; i >= 0; i--) {
+      const sm = this.skidMarks[i];
+      sm.y1 += this.currentSpeed;
+      sm.y2 += this.currentSpeed;
+      sm.life -= deltaTime;
+      if (sm.life <= 0 || (sm.y1 > this.height && sm.y2 > this.height)) {
+        this.skidMarks.splice(i, 1);
+      }
     }
 
     this.playerX = this.getLaneCenterX(this.playerLane) - this.playerWidth / 2;
@@ -244,6 +320,7 @@ export class GameLoop {
 
     // 1. Draw road surface
     this.drawRoad();
+    this.drawSkidMarks();
 
     // 2. Draw side skyscrapers & signs
     this.drawScenery();
@@ -304,7 +381,100 @@ export class GameLoop {
     this.ctx.restore();
   }
 
-  // Draw 8 completely unique cyberpunk and street car graphics
+  drawWheelSprite(w, h, accentColor) {
+    const ctx = this.ctx;
+    ctx.save();
+    // Tyre body
+    ctx.fillStyle = '#121216';
+    ctx.strokeStyle = '#050508';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(-w / 2, -h / 2, w, h, 3.5);
+    ctx.fill();
+    ctx.stroke();
+
+    // Tread lines
+    ctx.strokeStyle = '#282830';
+    ctx.lineWidth = 0.8;
+    for (let y = -h / 2 + 3; y < h / 2; y += 4.5) {
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, y);
+      ctx.lineTo(-w / 2 + 2, y);
+      ctx.moveTo(w / 2 - 2, y);
+      ctx.lineTo(w / 2, y);
+      ctx.stroke();
+    }
+
+    // Metallic Rim
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.arc(0, 0, w / 2.6, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawHeadlightBeam(lx, ly, color) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const beamLength = 200;
+    const beamWidth = 65;
+    
+    const grad = ctx.createLinearGradient(lx, ly, lx, ly - beamLength);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+    grad.addColorStop(0.18, 'rgba(255, 255, 255, 0.22)');
+    grad.addColorStop(0.6, `${color}25`); // transparent accent color
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(lx, ly);
+    ctx.lineTo(lx - beamWidth / 2, ly - beamLength);
+    ctx.lineTo(lx + beamWidth / 2, ly - beamLength);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawSkidMarks() {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.lineWidth = 3.5;
+    this.skidMarks.forEach(sm => {
+      ctx.globalAlpha = Math.max(0, sm.life / sm.maxLife) * 0.45;
+      ctx.beginPath();
+      ctx.moveTo(sm.x1, sm.y1);
+      ctx.lineTo(sm.x2, sm.y2);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  spawnBrakeSmokeParticles() {
+    const pxLeft = this.playerX + 6;
+    const pxRight = this.playerX + this.playerWidth - 6;
+    const py = this.playerY + this.playerHeight - 16;
+    
+    for (let tx of [pxLeft, pxRight]) {
+      if (Math.random() < 0.4) {
+        this.particles.push({
+          x: tx,
+          y: py,
+          vx: (Math.random() - 0.5) * 1.8,
+          vy: 1.0 + Math.random() * 1.5,
+          size: 2.0 + Math.random() * 3.5,
+          color: 'rgba(200, 201, 208, 0.35)',
+          glow: false,
+          life: 0.45,
+          maxLife: 0.45
+        });
+      }
+    }
+  }
+
   drawPlayer() {
     if (this.invulnerableTime > 0 && Math.floor(Date.now() / 80) % 2 === 0) {
       return;
@@ -316,216 +486,438 @@ export class GameLoop {
     const h = this.playerHeight;
     const color = this.carConfig.color;
     const id = this.carConfig.id;
+    const ctx = this.ctx;
 
-    this.ctx.save();
-    this.ctx.shadowColor = color;
-    this.ctx.shadowBlur = 15;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
 
+    ctx.save();
+    
+    // Pulsing Underglow on the road
+    const pulseFactor = 0.85 + Math.sin(Date.now() / 100) * 0.15;
+    const underglowGrad = ctx.createRadialGradient(cx, cy, w * 0.5, cx, cy, h * 0.9);
+    underglowGrad.addColorStop(0, `${color}55`);
+    underglowGrad.addColorStop(0.5, `${color}18`);
+    underglowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = underglowGrad;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, w * 0.95, h * 0.6 * pulseFactor, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Now, enter the local space (translated to cx, cy and rotated by bodyRoll)
+    ctx.translate(cx, cy);
+    ctx.rotate(this.bodyRoll);
+
+    // 1. Draw wheels if not the floating Hyper Phantom
+    if (id !== 'phantom') {
+      const wheelWidth = id === 'sentinel' ? 8 : 6.5;
+      const wheelHeight = id === 'sentinel' ? 18 : 15;
+
+      // Front wheels steer left/right
+      // Front Left
+      ctx.save();
+      ctx.translate(-w/2 + 2.5, -h/2 + 20);
+      ctx.rotate(this.steerAngle);
+      this.drawWheelSprite(wheelWidth, wheelHeight, color);
+      ctx.restore();
+
+      // Front Right
+      ctx.save();
+      ctx.translate(w/2 - 2.5, -h/2 + 20);
+      ctx.rotate(this.steerAngle);
+      this.drawWheelSprite(wheelWidth, wheelHeight, color);
+      ctx.restore();
+
+      // Rear wheels remain straight
+      // Rear Left
+      ctx.save();
+      ctx.translate(-w/2 + 2.5, h/2 - 18);
+      this.drawWheelSprite(wheelWidth, wheelHeight, color);
+      ctx.restore();
+
+      // Rear Right
+      ctx.save();
+      ctx.translate(w/2 - 2.5, h/2 - 18);
+      this.drawWheelSprite(wheelWidth, wheelHeight, color);
+      ctx.restore();
+    }
+
+    // 2. Draw Chassis shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 10;
+
+    // 3. Draw Chassis body based on car type
     if (id === 'roadster') {
-      this.ctx.fillStyle = '#0f0f24';
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.moveTo(x + w/2, y);
-      this.ctx.lineTo(x + w, y + h);
-      this.ctx.lineTo(x, y + h);
-      this.ctx.closePath();
-      this.ctx.fill();
-      this.ctx.stroke();
+      ctx.fillStyle = '#0a0a14';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -h/2);
+      ctx.lineTo(w/2, h/2 - 12);
+      ctx.lineTo(-w/2, h/2 - 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
 
-      this.ctx.fillStyle = color;
-      this.ctx.fillRect(x - 2, y + h - 25, 4, 20);
-      this.ctx.fillRect(x + w - 2, y + h - 25, 4, 20);
-
-      this.ctx.fillStyle = 'rgba(0, 240, 255, 0.45)';
-      this.ctx.beginPath();
-      this.ctx.moveTo(x + w/2, y + 25);
-      this.ctx.lineTo(x + w - 10, y + h - 20);
-      this.ctx.lineTo(x + 10, y + h - 20);
-      this.ctx.closePath();
-      this.ctx.fill();
-
-    } else if (id === 'cruiser') {
-      this.ctx.fillStyle = '#120c1f';
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = 2.5;
-      this.ctx.beginPath();
-      this.ctx.roundRect(x, y, w, h, 10);
-      this.ctx.fill();
-      this.ctx.stroke();
-
-      this.ctx.fillStyle = '#080512';
-      this.ctx.fillRect(x - 3, y + 15, 3, h - 30);
-      this.ctx.fillRect(x + w, y + 15, 3, h - 30);
-
-      this.ctx.fillStyle = color;
-      this.ctx.fillRect(x + 8, y + h - 6, w - 16, 3);
-
-      this.ctx.fillStyle = 'rgba(157, 78, 221, 0.4)';
-      this.ctx.fillRect(x + 6, y + 25, w - 12, 14);
-
-    } else if (id === 'gt') {
-      // Apex GT: Orange tuner with side skirts, headlights, spoiler
-      this.ctx.fillStyle = '#1f0d06';
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.roundRect(x, y + 4, w, h - 8, 6);
-      this.ctx.fill();
-      this.ctx.stroke();
-
-      // Street neon underglow
-      this.ctx.shadowBlur = 20;
-      this.ctx.fillStyle = 'rgba(255, 87, 34, 0.6)';
-      this.ctx.fillRect(x - 4, y + 20, 4, h - 40);
-      this.ctx.fillRect(x + w, y + 20, 4, h - 40);
-
-      // Tuner spoiler
-      this.ctx.fillStyle = '#111';
-      this.ctx.fillRect(x - 4, y + h - 6, w + 8, 4);
-      this.ctx.fillStyle = color;
-      this.ctx.fillRect(x - 4, y + h - 8, 2, 4);
-      this.ctx.fillRect(x + w + 2, y + h - 8, 2, 4);
-
-      // Cockpit window
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-      this.ctx.fillRect(x + 5, y + 22, w - 10, 16);
-
-    } else if (id === 'police') {
-      this.ctx.fillStyle = '#0a0d14';
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.roundRect(x, y + 4, w, h - 8, 8);
-      this.ctx.fill();
-      this.ctx.stroke();
-
-      const isRed = this.sirenFlashState < 10;
-      this.ctx.shadowBlur = 18;
-      this.ctx.shadowColor = isRed ? '#ff003c' : '#0066ff';
-      this.ctx.fillStyle = isRed ? '#ff003c' : '#0066ff';
-      this.ctx.fillRect(x + w/2 - 12, y + h/2 - 6, 24, 6);
-
-      this.ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
-      this.ctx.beginPath();
-      this.ctx.arc(x + w/2, y + 18, 5, 0, Math.PI*2);
-      this.ctx.fill();
-
-    } else if (id === 'cobra') {
-      // Carbon Cobra: Pink muscle car with double white stripes down hood
-      this.ctx.fillStyle = '#1c030d';
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = 2.5;
-      this.ctx.beginPath();
-      this.ctx.roundRect(x, y + 2, w, h - 4, 4);
-      this.ctx.fill();
-      this.ctx.stroke();
-
-      // Double racing stripes (white)
-      this.ctx.fillStyle = '#ffffff';
-      this.ctx.fillRect(x + w/2 - 6, y + 2, 3, h - 6);
-      this.ctx.fillRect(x + w/2 + 3, y + 2, 3, h - 6);
-
-      // Cowl hood scoop induction
-      this.ctx.fillStyle = '#000000';
-      this.ctx.fillRect(x + w/2 - 4, y + 24, 8, 12);
+      // Panel accent line
+      ctx.strokeStyle = `${color}88`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, -h/2 + 15);
+      ctx.lineTo(0, h/2 - 22);
+      ctx.stroke();
 
       // Windshield
-      this.ctx.fillStyle = 'rgba(233, 30, 99, 0.3)';
-      this.ctx.fillRect(x + 5, y + 36, w - 10, 12);
+      const windshieldGrad = ctx.createLinearGradient(0, -h/6, 0, h/10);
+      windshieldGrad.addColorStop(0, 'rgba(0, 240, 255, 0.7)');
+      windshieldGrad.addColorStop(1, 'rgba(0, 80, 120, 0.35)');
+      ctx.fillStyle = windshieldGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -h/6);
+      ctx.lineTo(w/3.5, h/10);
+      ctx.lineTo(-w/3.5, h/10);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.beginPath();
+      ctx.moveTo(-w/4.8, h/10 - 2);
+      ctx.lineTo(0, -h/6 + 4);
+      ctx.stroke();
+
+      // Rear spoiler
+      ctx.fillStyle = '#050508';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(-w/2 - 2, h/2 - 16, w + 4, 4);
+
+    } else if (id === 'cruiser') {
+      ctx.fillStyle = '#100a1c';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2 + 2, w, h - 4, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      // Front push-bumper bars
+      ctx.fillStyle = '#22222d';
+      ctx.fillRect(-w/3.2, -h/2 - 1, w * 2/3.2, 4);
+
+      // Armored side skirts
+      ctx.fillStyle = '#06030b';
+      ctx.fillRect(-w/2 - 2, -h/4, 2, h/2);
+      ctx.fillRect(w/2, -h/4, 2, h/2);
+
+      // Divided windshield segments
+      ctx.fillStyle = 'rgba(157, 78, 221, 0.55)';
+      ctx.fillRect(-w/3.2, -h/5, w/1.6, h/8);
+      ctx.fillStyle = '#100a1c';
+      ctx.fillRect(-1, -h/5, 2, h/8);
+
+      // Spoiler
+      ctx.fillStyle = '#181226';
+      ctx.fillRect(-w/2 + 6, h/2 - 7, w - 12, 4);
+
+    } else if (id === 'gt') {
+      ctx.fillStyle = '#1a0b04';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2 + 4, w, h - 8, 7);
+      ctx.fill();
+      ctx.stroke();
+
+      // Fender flares
+      ctx.strokeStyle = `${color}aa`;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-w/2 - 1, -h/2 + 18, 1, 15);
+      ctx.strokeRect(w/2, -h/2 + 18, 1, 15);
+      ctx.strokeRect(-w/2 - 1, h/2 - 28, 1, 15);
+      ctx.strokeRect(w/2, h/2 - 28, 1, 15);
+
+      // Carbon fiber hood details
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.fillRect(-w/4, -h/2 + 10, w/2, h/4);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.lineWidth = 1;
+      for (let offset = -w/4 + 2; offset < w/4; offset += 3.5) {
+        ctx.beginPath();
+        ctx.moveTo(offset, -h/2 + 10);
+        ctx.lineTo(offset + 1.8, -h/2 + 10 + h/4);
+        ctx.stroke();
+      }
+
+      // Windshield
+      const gtWinGrad = ctx.createLinearGradient(0, -h/8, 0, h/15);
+      gtWinGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+      gtWinGrad.addColorStop(1, 'rgba(255, 87, 34, 0.25)');
+      ctx.fillStyle = gtWinGrad;
+      ctx.beginPath();
+      ctx.roundRect(-w/3.5, -h/8, w/1.75, h/8, 2);
+      ctx.fill();
+
+      // Tuning spoiler
+      ctx.fillStyle = '#0c0502';
+      ctx.fillRect(-w/2 - 3, h/2 - 7, w + 6, 3);
+      ctx.fillStyle = color;
+      ctx.fillRect(-w/2 - 3, h/2 - 11, 2, 4);
+      ctx.fillRect(w/2 + 1, h/2 - 11, 2, 4);
+
+    } else if (id === 'police') {
+      ctx.fillStyle = '#080a0f';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2 + 4, w, h - 8, 9);
+      ctx.fill();
+      ctx.stroke();
+
+      // White panel decals
+      ctx.fillStyle = '#e6e8f0';
+      ctx.beginPath();
+      ctx.roundRect(-w/3.5, -h/2 + 8, w/1.75, h/3.5, 4);
+      ctx.fill();
+
+      ctx.fillStyle = '#444';
+      ctx.fillRect(-w/4, -h/2 - 1, w/2, 4);
+
+      // Windshield
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.32)';
+      ctx.fillRect(-w/3.2, -h/9, w/1.6, h/9);
+
+      // Sirens
+      const isRed = this.sirenFlashState < 10;
+      ctx.shadowColor = isRed ? '#ff003c' : '#0066ff';
+      ctx.shadowBlur = 15;
+      ctx.fillStyle = isRed ? '#ff003c' : '#0066ff';
+      ctx.fillRect(-12, -4, 24, 6);
+      ctx.shadowBlur = 0;
+
+      // Antennas
+      ctx.strokeStyle = '#888';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-w/4, h/2 - 8);
+      ctx.lineTo(-w/4, h/2 - 20);
+      ctx.moveTo(w/4, h/2 - 8);
+      ctx.lineTo(w/4, h/2 - 20);
+      ctx.stroke();
+
+    } else if (id === 'cobra') {
+      ctx.fillStyle = '#1c030d';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2 + 2, w, h - 4, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      // Double white stripes
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-5, -h/2 + 2, 3, h - 4);
+      ctx.fillRect(2, -h/2 + 2, 3, h - 4);
+
+      // Hood scoop
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(-4, -h/4, 8, 12);
+      ctx.fillStyle = '#222';
+      ctx.fillRect(-2, -h/4 + 2, 4, 8);
+
+      // Windshield
+      ctx.fillStyle = 'rgba(233, 30, 99, 0.35)';
+      ctx.fillRect(-w/3.2, -h/12, w/1.6, h/9);
+
+      // Low deck spoiler
+      ctx.fillStyle = '#111';
+      ctx.fillRect(-w/2 + 2, h/2 - 7, w - 4, 3);
 
     } else if (id === 'demon') {
-      this.ctx.fillStyle = '#1c030f';
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.moveTo(x + w/2, y);
-      this.ctx.lineTo(x + w - 4, y + 35);
-      this.ctx.lineTo(x + w - 1, y + h - 8);
-      this.ctx.lineTo(x + 1, y + h - 8);
-      this.ctx.lineTo(x + 4, y + 35);
-      this.ctx.closePath();
-      this.ctx.fill();
-      this.ctx.stroke();
+      ctx.fillStyle = '#16020c';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -h/2);
+      ctx.lineTo(w/2 - 3, -h/4);
+      ctx.lineTo(w/2, h/2 - 6);
+      ctx.lineTo(-w/2, h/2 - 6);
+      ctx.lineTo(-w/2 + 3, -h/4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
 
-      this.ctx.fillStyle = color;
-      this.ctx.fillRect(x - 5, y + h - 18, 6, 15);
-      this.ctx.fillRect(x + w - 1, y + h - 18, 6, 15);
+      // jet cockpit
+      const demonWin = ctx.createRadialGradient(0, -h/8, 1, 0, -h/8, w/3.5);
+      demonWin.addColorStop(0, '#ffffff');
+      demonWin.addColorStop(0.5, 'rgba(255, 0, 127, 0.85)');
+      demonWin.addColorStop(1, 'rgba(10, 2, 6, 0.9)');
+      ctx.fillStyle = demonWin;
+      ctx.beginPath();
+      ctx.ellipse(0, -h/8, w/5, h/8, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-      this.ctx.fillStyle = '#ff6600';
-      this.ctx.fillRect(x + w/2 - 5, y + h - 5, 10, 4);
+      // Reactor engine
+      const pulseEngine = Math.sin(Date.now() / 65) * 0.15 + 0.85;
+      ctx.shadowColor = '#ff5500';
+      ctx.shadowBlur = 12 * pulseEngine;
+      ctx.fillStyle = '#ff3300';
+      ctx.fillRect(-6, h/4, 12, 10);
+      ctx.fillStyle = '#ffff00';
+      ctx.fillRect(-3, h/4 + 2, 6, 6);
+      ctx.shadowBlur = 0;
 
     } else if (id === 'sentinel') {
-      this.ctx.fillStyle = '#061a0b';
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = 3;
-      this.ctx.beginPath();
-      this.ctx.roundRect(x, y, w, h, 6);
-      this.ctx.fill();
-      this.ctx.stroke();
+      ctx.fillStyle = '#04140a';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2, w, h, 6);
+      ctx.fill();
+      ctx.stroke();
 
-      this.ctx.fillStyle = '#111';
-      this.ctx.fillRect(x - 2, y, w + 4, 8);
-      this.ctx.fillRect(x - 2, y + h - 8, w + 4, 8);
+      // front grill
+      ctx.fillStyle = '#151515';
+      ctx.fillRect(-w/3, -h/2 + 4, w * 2/3, 8);
+      ctx.fillStyle = color;
+      for (let offset = -w/3 + 3; offset < w/3; offset += 5.5) {
+        ctx.fillRect(offset, -h/2 + 5, 2, 6);
+      }
 
-      this.ctx.fillStyle = color;
-      this.ctx.fillRect(x + 10, y + 16, w - 20, 4);
-      this.ctx.fillRect(x + 10, y + 24, w - 20, 4);
+      // windshield
+      ctx.fillStyle = 'rgba(57, 255, 20, 0.35)';
+      ctx.fillRect(-w/2.5, -h/4, w * 2/2.5, h/10);
+
+      // roof searchlights
+      ctx.fillStyle = '#333';
+      ctx.fillRect(-w/3, -h/4 - 4, 6, 4);
+      ctx.fillRect(w/3 - 6, -h/4 - 4, 6, 4);
+      ctx.fillStyle = '#fffae0';
+      ctx.beginPath();
+      ctx.arc(-w/3 + 3, -h/4 - 4, 2.5, 0, Math.PI * 2);
+      ctx.arc(w/3 - 3, -h/4 - 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // flatbed rear cover
+      ctx.fillStyle = '#092412';
+      ctx.fillRect(-w/2 + 4, h/8, w - 8, h * 3/8 - 4);
 
     } else if (id === 'phantom') {
-      this.ctx.fillStyle = '#1d1d1f';
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI*2);
-      this.ctx.fill();
-      this.ctx.stroke();
+      ctx.fillStyle = '#1c1c22';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
 
-      const coreR = 5 + Math.sin(Date.now() / 100) * 2;
-      this.ctx.fillStyle = '#fff';
-      this.ctx.shadowBlur = 15;
-      this.ctx.shadowColor = '#fff';
-      this.ctx.beginPath();
-      this.ctx.arc(x + w/2, y + h/2 - 10, coreR, 0, Math.PI*2);
-      this.ctx.fill();
+      // Hover pads
+      const hoverPulse = 0.85 + Math.sin(Date.now() / 80) * 0.15;
+      ctx.save();
+      ctx.shadowColor = '#00ffff';
+      ctx.shadowBlur = 10 * hoverPulse;
+      ctx.fillStyle = '#00ffff';
+      ctx.beginPath();
+      ctx.arc(-w/2 + 4.5, -h/3, 4.5, 0, Math.PI * 2);
+      ctx.arc(w/2 - 4.5, -h/3, 4.5, 0, Math.PI * 2);
+      ctx.arc(-w/2 + 4.5, h/3, 4.5, 0, Math.PI * 2);
+      ctx.arc(w/2 - 4.5, h/3, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // canopy
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
+      ctx.beginPath();
+      ctx.ellipse(0, -h/6, w/3.5, h/10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // reactor core
+      const coreRadius = 7 + Math.sin(Date.now() / 90) * 2.5;
+      const coreGrad = ctx.createRadialGradient(0, 5, 1, 0, 5, coreRadius);
+      coreGrad.addColorStop(0, '#ffffff');
+      coreGrad.addColorStop(0.5, '#00f0ff');
+      coreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = coreGrad;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(0, 5, coreRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
     }
 
-    // Taillights
-    if (id !== 'roadster') {
-      this.ctx.shadowColor = 'rgba(255, 0, 80, 0.8)';
-      this.ctx.fillStyle = 'rgba(255, 0, 80, 0.9)';
-      this.ctx.fillRect(x + 4, y + h - 4, 6, 2);
-      this.ctx.fillRect(x + w - 10, y + h - 4, 6, 2);
+    // 4. Draw headlights & light beams
+    const hlY = -h/2;
+    const hlXLeft = -w/2 + 8;
+    const hlXRight = w/2 - 8;
+
+    if (this.options.timeOfDay === 'night' || this.options.weatherMode === 'rain') {
+      this.drawHeadlightBeam(hlXLeft, hlY, color);
+      this.drawHeadlightBeam(hlXRight, hlY, color);
     }
 
-    // Active powerups
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(hlXLeft - 2.5, hlY, 5, 2.5);
+    ctx.fillRect(hlXRight - 2.5, hlY, 5, 2.5);
+    ctx.shadowBlur = 0;
+
+    // 5. Draw exhaust pipes and dynamic sparks/particles
+    const exhY = h/2;
+    const exhXLeft = -w/2 + 9;
+    const exhXRight = w/2 - 9;
+    ctx.fillStyle = '#555';
+    ctx.fillRect(exhXLeft - 1.5, exhY - 3, 3, 4);
+    ctx.fillRect(exhXRight - 1.5, exhY - 3, 3, 4);
+
+    // Taillights/Brakelights
+    const tlY = h/2 - 1.5;
+    const tlWidth = 6;
+    const tlHeight = 2.5;
+
+    if (this.isBraking) {
+      ctx.fillStyle = '#ff1e1e';
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 18;
+      ctx.fillRect(-w/2 + 5, tlY - 1, tlWidth, tlHeight);
+      ctx.fillRect(w/2 - 5 - tlWidth, tlY - 1, tlWidth, tlHeight);
+    } else {
+      ctx.fillStyle = '#bb0000';
+      ctx.shadowColor = '#bb0000';
+      ctx.shadowBlur = 6;
+      ctx.fillRect(-w/2 + 5, tlY, tlWidth, tlHeight);
+      ctx.fillRect(w/2 - 5 - tlWidth, tlY, tlWidth, tlHeight);
+    }
+    ctx.shadowBlur = 0;
+
+    // 6. Draw powerup shields & magnets inside rotated context (centered)
     if (this.shieldActive) {
-      this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.85)';
-      this.ctx.shadowColor = 'rgba(0, 240, 255, 0.5)';
-      this.ctx.shadowBlur = 18;
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.arc(x + w/2, y + h/2, h/1.4, 0, Math.PI*2);
-      this.ctx.stroke();
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.85)';
+      ctx.shadowColor = 'rgba(0, 240, 255, 0.5)';
+      ctx.shadowBlur = 18;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, h / 1.35, 0, Math.PI * 2);
+      ctx.stroke();
 
-      const grad = this.ctx.createRadialGradient(x + w/2, y + h/2, w/2, x + w/2, y + h/2, h/1.4);
+      const grad = ctx.createRadialGradient(0, 0, w / 2, 0, 0, h / 1.35);
       grad.addColorStop(0, 'rgba(0, 240, 255, 0.0)');
-      grad.addColorStop(1, 'rgba(0, 240, 255, 0.12)');
-      this.ctx.fillStyle = grad;
-      this.ctx.fill();
+      grad.addColorStop(1, 'rgba(0, 240, 255, 0.15)');
+      ctx.fillStyle = grad;
+      ctx.fill();
     }
 
     if (this.magnetActive) {
-      this.ctx.strokeStyle = 'rgba(157, 78, 221, 0.6)';
-      this.ctx.shadowColor = 'rgba(157, 78, 221, 0.4)';
-      this.ctx.shadowBlur = 10;
-      this.ctx.lineWidth = 1.5;
-      this.ctx.beginPath();
-      this.ctx.arc(x + w/2, y + h/2, h * 1.8, 0, Math.PI * 2);
-      this.ctx.stroke();
+      ctx.strokeStyle = 'rgba(157, 78, 221, 0.65)';
+      ctx.shadowColor = 'rgba(157, 78, 221, 0.45)';
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(0, 0, h * 1.65, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
-    this.ctx.restore();
+    ctx.restore();
   }
 
   drawScenery() {
@@ -581,36 +973,148 @@ export class GameLoop {
 
   drawTraffic() {
     this.traffic.forEach(car => {
-      this.ctx.save();
-      this.ctx.shadowColor = car.color;
-      this.ctx.shadowBlur = 10;
-      this.ctx.lineWidth = 1.5;
+      const ctx = this.ctx;
+      const cx = car.x + car.width / 2;
+      const cy = car.y + car.height / 2;
+      const w = car.width;
+      const h = car.height;
 
-      this.ctx.fillStyle = '#0d0d1c';
-      this.ctx.strokeStyle = car.color;
-      this.ctx.beginPath();
-      this.ctx.roundRect(car.x, car.y, car.width, car.height, 6);
-      this.ctx.fill();
-      this.ctx.stroke();
-
-      this.ctx.shadowColor = '#fff';
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      this.ctx.fillRect(car.x + 5, car.y + car.height - 2, 6, 2);
-      this.ctx.fillRect(car.x + car.width - 11, car.y + car.height - 2, 6, 2);
-
-      this.ctx.shadowColor = 'rgba(255, 50, 50, 0.5)';
-      this.ctx.fillStyle = 'rgba(255, 50, 50, 0.8)';
-      this.ctx.fillRect(car.x + 4, car.y, 6, 2);
-      this.ctx.fillRect(car.x + car.width - 10, car.y, 6, 2);
-
-      if (car.isPolice) {
-        const isBlue = this.sirenFlashState < 10;
-        this.ctx.shadowColor = isBlue ? '#0066ff' : '#ff003c';
-        this.ctx.fillStyle = isBlue ? '#0066ff' : '#ff003c';
-        this.ctx.fillRect(car.x + car.width/2 - 6, car.y + car.height/2 - 3, 12, 6);
+      ctx.save();
+      
+      // Compute steer/tilt of the traffic car if lane changing
+      let steerAngle = 0;
+      if (car.isLaneChanger && car.targetLane !== undefined) {
+        const dx = (this.getLaneCenterX(car.targetLane) - car.width / 2) - car.x;
+        steerAngle = Math.max(-0.25, Math.min(0.25, dx * 0.05));
       }
 
-      this.ctx.restore();
+      // Enter local coordinates
+      ctx.translate(cx, cy);
+
+      // Draw wheels
+      const wheelW = 5.5;
+      const wheelH = 13;
+      
+      // Front wheels
+      ctx.save();
+      ctx.translate(-w/2 + 2, -h/2 + 15);
+      ctx.rotate(steerAngle);
+      ctx.fillStyle = '#1c1c20';
+      ctx.fillRect(-wheelW/2, -wheelH/2, wheelW, wheelH);
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(w/2 - 2, -h/2 + 15);
+      ctx.rotate(steerAngle);
+      ctx.fillStyle = '#1c1c20';
+      ctx.fillRect(-wheelW/2, -wheelH/2, wheelW, wheelH);
+      ctx.restore();
+
+      // Rear wheels
+      ctx.fillStyle = '#1c1c20';
+      ctx.fillRect(-w/2 + 2 - wheelW/2, h/2 - 15 - wheelH/2, wheelW, wheelH);
+      ctx.fillRect(w/2 - 2 - wheelW/2, h/2 - 15 - wheelH/2, wheelW, wheelH);
+
+      // Chassis body shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+      ctx.shadowBlur = 8;
+
+      // Chassis body
+      ctx.fillStyle = '#0b0c15';
+      ctx.strokeStyle = car.color;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2, w, h, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Panel details (grille / hood lines)
+      ctx.fillStyle = '#1c1c25';
+      ctx.fillRect(-w/3.5, -h/2 + 4, w/1.75, 6); // grille
+
+      // Windshield (rear window is at bottom, front windshield at top)
+      ctx.fillStyle = 'rgba(100, 150, 220, 0.4)';
+      ctx.fillRect(-w/3.2, -h/4, w/1.6, h/8); // front windshield
+      ctx.fillStyle = 'rgba(100, 150, 220, 0.3)';
+      ctx.fillRect(-w/3.2, h/4, w/1.6, h/10); // rear window
+
+      // Sirens if police
+      if (car.isPolice) {
+        const isBlue = this.sirenFlashState < 10;
+        ctx.shadowColor = isBlue ? '#0066ff' : '#ff003c';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = isBlue ? '#0066ff' : '#ff003c';
+        ctx.fillRect(-8, -3, 16, 5);
+        ctx.shadowBlur = 0;
+      }
+
+      // Dynamic headlights (at the front/top of the car) pointing forward (upwards)
+      const hlY = -h / 2;
+      const hlXLeft = -w / 2 + 5;
+      const hlXRight = w / 2 - 5;
+
+      // Headlight cones
+      if (this.options.timeOfDay === 'night' || this.options.weatherMode === 'rain') {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        const beamLength = 140;
+        const beamWidth = 45;
+        const grad = ctx.createLinearGradient(0, hlY, 0, hlY - beamLength);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
+        grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.15)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        // Left headlight beam
+        ctx.moveTo(hlXLeft, hlY);
+        ctx.lineTo(hlXLeft - beamWidth/2, hlY - beamLength);
+        ctx.lineTo(hlXLeft + beamWidth/2, hlY - beamLength);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right headlight beam
+        ctx.beginPath();
+        ctx.moveTo(hlXRight, hlY);
+        ctx.lineTo(hlXRight - beamWidth/2, hlY - beamLength);
+        ctx.lineTo(hlXRight + beamWidth/2, hlY - beamLength);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Headlight bulbs (glow)
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(hlXLeft - 1.5, hlY, 3, 2);
+      ctx.fillRect(hlXRight - 1.5, hlY, 3, 2);
+
+      // Taillights/Brakelights (at the bottom/rear of the car) pointing backward (downwards)
+      const tlY = h / 2 - 2;
+      const tlXLeft = -w / 2 + 4;
+      const tlXRight = w / 2 - 4 - 5;
+      const tlWidth = 5;
+      const tlHeight = 2.5;
+
+      // Detect if player is rapidly approaching this car in the same lane
+      const latDist = Math.abs(car.x - this.playerX);
+      const isPlayerApproaching = latDist < 45 && this.playerY > car.y + h && this.playerY - (car.y + h) < 140;
+      
+      if (isPlayerApproaching) {
+        // Bright glowing brake lights!
+        ctx.fillStyle = '#ff1e1e';
+        ctx.shadowColor = '#ff0000';
+        ctx.shadowBlur = 12;
+        ctx.fillRect(tlXLeft, tlY, tlWidth, tlHeight);
+        ctx.fillRect(tlXRight, tlY, tlWidth, tlHeight);
+      } else {
+        // Standard tail lights
+        ctx.fillStyle = 'rgba(200, 20, 20, 0.8)';
+        ctx.fillRect(tlXLeft, tlY, tlWidth, tlHeight);
+        ctx.fillRect(tlXRight, tlY, tlWidth, tlHeight);
+      }
+
+      ctx.restore();
     });
   }
 
