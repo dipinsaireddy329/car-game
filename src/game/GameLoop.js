@@ -78,11 +78,19 @@ export class GameLoop {
     this.lastSkidRightX = undefined;
     this.lastSkidRightY = undefined;
 
+    // Advanced Visual Systems
+    this.gantries = [];            // Scrolling 3D neon arch gantries
+    this.gantrySpawnTimer = 0;
+    this.roadRipples = [];         // Rain splash concentric ripples on asphalt
+    this.warpScale = 1.0;          // Canvas zoom scale during Nitro warp
+    this.sparkTimer = 0;           // Throttle for friction sparks
+
     // Initialize side scenery & rain
     this.initScenery();
     if (this.options.weatherMode === 'rain') {
       this.initRain();
     }
+    this.initGantries();
   }
 
   getLaneCenterX(laneIndex) {
@@ -299,6 +307,7 @@ export class GameLoop {
     this.updateFloatingTexts(deltaTime);
     if (this.options.weatherMode === 'rain') {
       this.updateRain();
+      this.updateRipples(deltaTime);
     }
 
     // 9. Spawner triggers
@@ -312,17 +321,57 @@ export class GameLoop {
       this.score += Math.round(this.currentSpeed / 4);
       this.options.onScoreUpdate(this.score);
     }
+
+    // 12. Advanced visual system updates
+    // Nitro warp scale: zoom in when boosting, ease back to 1.0
+    const targetWarp = this.isBoosting ? 1.04 : 1.0;
+    this.warpScale += (targetWarp - this.warpScale) * 0.08;
+
+    // Gantry spawning & scrolling
+    this.gantrySpawnTimer += deltaTime;
+    if (this.gantrySpawnTimer >= 3.0) {
+      this.gantrySpawnTimer = 0;
+      this.spawnGantry();
+    }
+    this.updateGantries();
+
+    // Friction sparks: spray when braking hard or drifting
+    this.sparkTimer += deltaTime;
+    if (this.sparkTimer >= 0.04) {
+      this.sparkTimer = 0;
+      const isSkidding = this.isBraking || Math.abs(this.steerAngle) > 0.18;
+      if (isSkidding && this.currentSpeed > this.baseSpeed * 0.7) {
+        this.spawnFrictionSparks();
+      }
+    }
+
+    // Rain ripple spawning
+    if (this.options.weatherMode === 'rain' && Math.random() < 0.18) {
+      const rx = this.roadLeft + Math.random() * this.roadWidth;
+      const ry = Math.random() * this.height;
+      this.roadRipples.push({ x: rx, y: ry, r: 0, maxR: 8 + Math.random() * 8, life: 0.5, maxLife: 0.5 });
+    }
   }
 
   // Draw scene
   draw() {
-    this.ctx.clearRect(0, 0, this.width, this.height);
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.width, this.height);
 
-    // 1. Draw road surface
+    // Apply nitro warp zoom from canvas center
+    if (Math.abs(this.warpScale - 1.0) > 0.0005) {
+      ctx.save();
+      ctx.translate(this.width / 2, this.height / 2);
+      ctx.scale(this.warpScale, this.warpScale);
+      ctx.translate(-this.width / 2, -this.height / 2);
+    }
+
+    // 1. Draw road surface + ripples
     this.drawRoad();
+    this.drawRipples();
     this.drawSkidMarks();
 
-    // 2. Draw side skyscrapers & signs
+    // 2. Draw wireframe skyscrapers & signs
     this.drawScenery();
 
     // 3. Draw items & vehicles
@@ -331,16 +380,34 @@ export class GameLoop {
     this.drawParticles();
     this.drawPlayer();
 
-    // 4. Draw overlays (floating texts, rain overlays, lightning flash)
+    // 4. Draw gantry arches over road
+    this.drawGantries();
+
+    // 5. Draw magnet laser arcs connecting player to coins
+    if (this.magnetActive) {
+      this.drawMagnetArcs();
+    }
+
+    // 6. Draw overlays (floating texts, rain overlays, lightning flash)
     this.drawFloatingTexts();
     if (this.options.weatherMode === 'rain') {
       this.drawRain();
       if (this.lightningAlpha > 0) {
-        this.ctx.fillStyle = `rgba(225, 245, 255, ${this.lightningAlpha})`;
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillStyle = `rgba(225, 245, 255, ${this.lightningAlpha})`;
+        ctx.fillRect(0, 0, this.width, this.height);
       }
     }
-    
+
+    // Restore warp transform
+    if (Math.abs(this.warpScale - 1.0) > 0.0005) {
+      ctx.restore();
+    }
+
+    // 7. Speed lines at canvas edge during nitro (drawn OUTSIDE warp transform)
+    if (this.isBoosting) {
+      this.drawSpeedLines();
+    }
+
     this.drawAmbientLighting();
   }
 
@@ -960,6 +1027,30 @@ export class GameLoop {
     ctx.fillRect(exhXLeft - 1.5, exhY - 3, 3, 4);
     ctx.fillRect(exhXRight - 1.5, exhY - 3, 3, 4);
 
+    // Nitro Rocket Fire — animated flame triangles when boosting
+    if (this.isBoosting) {
+      const flicker = 0.7 + Math.sin(Date.now() / 45) * 0.3;
+      const fLen = (10 + Math.random() * 18) * flicker;
+
+      for (const ex of [exhXLeft, exhXRight]) {
+        const fireGrad = ctx.createLinearGradient(ex, exhY, ex, exhY + fLen);
+        fireGrad.addColorStop(0, 'rgba(255, 210, 80, 0.95)');
+        fireGrad.addColorStop(0.4, `rgba(255, 80, 20, 0.85)`);
+        fireGrad.addColorStop(1, `rgba(255, 0, 100, 0)`);
+
+        ctx.shadowColor = '#ff5500';
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = fireGrad;
+        ctx.beginPath();
+        ctx.moveTo(ex - 3, exhY);
+        ctx.lineTo(ex + 3, exhY);
+        ctx.lineTo(ex + (Math.random() - 0.5) * 2, exhY + fLen);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    }
+
     // Taillights/Brakelights
     const tlY = h/2 - 1.5;
     const tlWidth = 6;
@@ -1011,53 +1102,132 @@ export class GameLoop {
   }
 
   drawScenery() {
+    const ctx = this.ctx;
     this.scenery.forEach(b => {
-      this.ctx.save();
-      this.ctx.fillStyle = b.color;
-      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-      this.ctx.fillRect(b.x, b.y, b.width, b.height);
-      this.ctx.strokeRect(b.x, b.y, b.width, b.height);
+      ctx.save();
 
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-      const rows = Math.floor(b.height / 15);
-      const cols = Math.floor(b.width / 10);
-      for (let r = 1; r < rows; r++) {
-        for (let c = 1; c < cols; c++) {
-          if ((r + c + Math.round(b.y / 20)) % 3 === 0) {
-            this.ctx.fillStyle = b.lightColor;
-            this.ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 200 + r) * 0.3;
-          } else {
-            this.ctx.fillStyle = 'rgba(255,255,255,0.03)';
-            this.ctx.globalAlpha = 1.0;
-          }
-          this.ctx.fillRect(b.x + c * 8, b.y + r * 12, 3, 3);
-        }
+      // Dark body fill
+      ctx.fillStyle = b.color;
+      ctx.fillRect(b.x, b.y, b.width, b.height);
+
+      // Wireframe structural outline — glowing cyan/pink edges
+      ctx.strokeStyle = b.lightColor;
+      ctx.lineWidth = 1.2;
+      ctx.shadowColor = b.lightColor;
+      ctx.shadowBlur = 6;
+      ctx.strokeRect(b.x, b.y, b.width, b.height);
+      ctx.shadowBlur = 0;
+
+      // Horizontal floor lines (structural bands)
+      const floorSpacing = 14;
+      const bandPulse = Math.sin(Date.now() / 500 + b.y * 0.01);
+      for (let fy = b.y + floorSpacing; fy < b.y + b.height; fy += floorSpacing) {
+        const bandAlpha = 0.06 + (bandPulse > 0 && (Math.round((fy - b.y) / floorSpacing)) % 3 === 1 ? bandPulse * 0.12 : 0);
+        ctx.strokeStyle = `rgba(255,255,255,${bandAlpha})`;
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(b.x, fy);
+        ctx.lineTo(b.x + b.width, fy);
+        ctx.stroke();
       }
 
+      // Structural X-cross diagonals
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(b.x + b.width, b.y + b.height);
+      ctx.moveTo(b.x + b.width, b.y);
+      ctx.lineTo(b.x, b.y + b.height);
+      ctx.stroke();
+
+      // Lit windows: dot matrix with pulse
+      const rows = Math.floor(b.height / 12);
+      const cols = Math.floor(b.width / 9);
+      for (let r = 1; r < rows; r++) {
+        for (let c = 1; c < cols; c++) {
+          const seed = (r * 7 + c * 3) % 5;
+          const glowing = (seed + Math.round(b.y / 50)) % 3 === 0;
+          if (glowing) {
+            const wa = 0.35 + Math.sin(Date.now() / 300 + r + c) * 0.25;
+            ctx.globalAlpha = Math.max(0, wa);
+            ctx.fillStyle = b.lightColor;
+            ctx.fillRect(b.x + c * 8 + 1, b.y + r * 11 + 1, 3, 3);
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      // Pulsing neon laser band (1 per building)
+      const bandY = b.y + b.height * 0.3 + Math.sin(Date.now() / 800 + b.x) * b.height * 0.15;
+      ctx.save();
+      ctx.shadowColor = b.lightColor;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = b.lightColor;
+      ctx.globalAlpha = 0.3 + Math.sin(Date.now() / 400 + b.x) * 0.15;
+      ctx.fillRect(b.x, bandY, b.width, 2);
+      ctx.restore();
+
+      // Roof antenna
+      const antX = b.x + b.width / 2;
+      ctx.strokeStyle = 'rgba(200,200,210,0.7)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(antX, b.y);
+      ctx.lineTo(antX, b.y - 14);
+      ctx.stroke();
+
+      // Antenna warning light blink
+      const blink = (Math.floor(Date.now() / 600) + Math.floor(b.x)) % 2 === 0;
+      if (blink) {
+        ctx.shadowColor = '#ff2200';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = '#ff3300';
+        ctx.beginPath();
+        ctx.arc(antX, b.y - 14, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+
+      // Billboard sign
       if (b.signText) {
-        this.ctx.shadowColor = b.lightColor;
-        this.ctx.shadowBlur = 10;
-        this.ctx.globalAlpha = 0.8 + Math.sin(Date.now() / 150) * 0.15;
-        this.ctx.fillStyle = '#020208';
-        this.ctx.strokeStyle = b.lightColor;
-        this.ctx.lineWidth = 1.5;
+        ctx.shadowColor = b.lightColor;
+        ctx.shadowBlur = 12;
+        ctx.globalAlpha = 0.85 + Math.sin(Date.now() / 200) * 0.12;
+        ctx.fillStyle = '#010105';
+        ctx.strokeStyle = b.lightColor;
+        ctx.lineWidth = 1.5;
         
         const sy = b.y + b.height / 2 - 12;
         const sh = 20;
-        const sw = b.width + 12;
-        const sx = b.isLeft ? b.x - 4 : b.x - 8;
+        const sw = b.width + 14;
+        const sx = b.isLeft ? b.x - 4 : b.x - 10;
         
-        this.ctx.beginPath();
-        this.ctx.rect(sx, sy, sw, sh);
-        this.ctx.fill();
-        this.ctx.stroke();
+        ctx.beginPath();
+        ctx.rect(sx, sy, sw, sh);
+        ctx.fill();
+        ctx.stroke();
 
-        this.ctx.fillStyle = b.lightColor;
-        this.ctx.font = 'bold 9px Orbitron';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(b.signText, sx + sw/2, sy + 13);
+        // Corner tick marks
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy + 3); ctx.lineTo(sx, sy);
+        ctx.lineTo(sx + 3, sy);
+        ctx.moveTo(sx + sw - 3, sy); ctx.lineTo(sx + sw, sy);
+        ctx.lineTo(sx + sw, sy + 3);
+        ctx.moveTo(sx + sw, sy + sh - 3); ctx.lineTo(sx + sw, sy + sh);
+        ctx.lineTo(sx + sw - 3, sy + sh);
+        ctx.moveTo(sx + 3, sy + sh); ctx.lineTo(sx, sy + sh);
+        ctx.lineTo(sx, sy + sh - 3);
+        ctx.stroke();
+
+        ctx.fillStyle = b.lightColor;
+        ctx.font = 'bold 9px Orbitron';
+        ctx.textAlign = 'center';
+        ctx.fillText(b.signText, sx + sw / 2, sy + 13);
       }
-      this.ctx.restore();
+      ctx.globalAlpha = 1;
+      ctx.restore();
     });
   }
 
@@ -1799,6 +1969,242 @@ export class GameLoop {
         life: 0.4,
         maxLife: 0.4
       });
+    }
+  }
+
+  // ─── Gantry Arch System ───────────────────────────────────────────────────
+
+  initGantries() {
+    // Pre-seed 2 gantries at different heights
+    for (let i = 0; i < 2; i++) {
+      this.gantries.push(this.createGantry(-i * 500 - 300));
+    }
+  }
+
+  createGantry(startY) {
+    const colors = ['#00f0ff', '#ff007f', '#9d4edd', '#39ff14'];
+    return {
+      y: startY !== undefined ? startY : -80,
+      speed: this.currentSpeed,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      label: Math.random() > 0.5 ? (['KM', 'EXIT', 'SPEED ZONE', 'GRID NODE', 'DATA HUB'][Math.floor(Math.random() * 5)]) : null
+    };
+  }
+
+  spawnGantry() {
+    this.gantries.push(this.createGantry(-80));
+  }
+
+  updateGantries() {
+    for (let i = this.gantries.length - 1; i >= 0; i--) {
+      this.gantries[i].y += this.currentSpeed * 0.85;
+      if (this.gantries[i].y > this.height + 120) {
+        this.gantries.splice(i, 1);
+      }
+    }
+  }
+
+  drawGantries() {
+    const ctx = this.ctx;
+    this.gantries.forEach(g => {
+      ctx.save();
+
+      // 3D perspective: gantry looks larger as it scrolls down
+      const progressY = Math.max(0, Math.min(1, g.y / this.height));
+      const archHeight = 28 + progressY * 32;
+      const pillarW = 5 + progressY * 4;
+      const alpha = 0.12 + progressY * 0.65;
+
+      ctx.globalAlpha = Math.min(1, alpha);
+      ctx.strokeStyle = g.color;
+      ctx.shadowColor = g.color;
+      ctx.shadowBlur = 10 + progressY * 12;
+      ctx.lineWidth = 1.5 + progressY * 1.5;
+
+      // Left pillar
+      ctx.beginPath();
+      ctx.moveTo(this.roadLeft - 4, g.y + archHeight);
+      ctx.lineTo(this.roadLeft - 4, g.y);
+      ctx.stroke();
+
+      // Right pillar
+      ctx.beginPath();
+      ctx.moveTo(this.roadRight + 4, g.y + archHeight);
+      ctx.lineTo(this.roadRight + 4, g.y);
+      ctx.stroke();
+
+      // Arch spanning top
+      ctx.beginPath();
+      ctx.moveTo(this.roadLeft - 4, g.y);
+      ctx.bezierCurveTo(
+        this.roadLeft + this.roadWidth * 0.2, g.y - 20 * progressY,
+        this.roadRight - this.roadWidth * 0.2, g.y - 20 * progressY,
+        this.roadRight + 4, g.y
+      );
+      ctx.stroke();
+
+      // Crossbar with dashes
+      ctx.setLineDash([6, 5]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(this.roadLeft - 4, g.y + archHeight * 0.5);
+      ctx.lineTo(this.roadRight + 4, g.y + archHeight * 0.5);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Hanging neon lights
+      const lightCount = 5;
+      for (let li = 0; li <= lightCount; li++) {
+        const lx = this.roadLeft + (this.roadWidth / lightCount) * li;
+        const dropY = g.y + archHeight * 0.5 + 4 + progressY * 8;
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = g.color;
+        ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 200 + li) * 0.3;
+        ctx.beginPath();
+        ctx.arc(lx, dropY, 2 + progressY * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Gantry label sign
+      if (g.label && progressY > 0.3) {
+        const labelAlpha = Math.min(1, (progressY - 0.3) * 2.5);
+        ctx.globalAlpha = labelAlpha;
+        ctx.font = `bold ${8 + Math.floor(progressY * 5)}px Orbitron`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = g.color;
+        ctx.shadowBlur = 8;
+        ctx.fillText(g.label, this.width / 2, g.y + archHeight * 0.5 - 4);
+      }
+
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    });
+  }
+
+  // ─── Magnet Laser Arcs ───────────────────────────────────────────────────
+
+  drawMagnetArcs() {
+    const ctx = this.ctx;
+    const pcx = this.playerX + this.playerWidth / 2;
+    const pcy = this.playerY + this.playerHeight / 2;
+
+    this.items.forEach(item => {
+      if (item.type !== 'COIN' && !(this.carConfig.id === 'phantom' && item.type === 'FUEL')) return;
+      const dx = item.x - pcx;
+      const dy = item.y - pcy;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 195) return;
+
+      const alpha = Math.max(0, 1 - dist / 195) * (0.5 + Math.sin(Date.now() / 80 + item.x) * 0.25);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = 'rgba(157, 78, 221, 0.9)';
+      ctx.shadowColor = '#9d4edd';
+      ctx.shadowBlur = 8;
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -(Date.now() / 80) % 8;
+      ctx.beginPath();
+      ctx.moveTo(pcx, pcy);
+      ctx.lineTo(item.x, item.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    });
+  }
+
+  // ─── Nitro Speed Lines ───────────────────────────────────────────────────
+
+  drawSpeedLines() {
+    const ctx = this.ctx;
+    ctx.save();
+    const t = Date.now();
+    const lineCount = 14;
+
+    for (let i = 0; i < lineCount; i++) {
+      const alpha = 0.08 + Math.random() * 0.15;
+      const ySeed = ((t / 4 + i * 53) % this.height);
+      const lineLength = 40 + Math.random() * 80;
+
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 1;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 4;
+
+      // Left edge lines
+      ctx.beginPath();
+      ctx.moveTo(0, ySeed);
+      ctx.lineTo(lineLength, ySeed + 2);
+      ctx.stroke();
+
+      // Right edge lines
+      ctx.beginPath();
+      ctx.moveTo(this.width, ySeed + 30 + i * 4);
+      ctx.lineTo(this.width - lineLength, ySeed + 32 + i * 4);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  // ─── Rain Road Ripples ───────────────────────────────────────────────────
+
+  updateRipples(deltaTime) {
+    for (let i = this.roadRipples.length - 1; i >= 0; i--) {
+      const rp = this.roadRipples[i];
+      rp.r += deltaTime * 30;
+      rp.y += this.currentSpeed;
+      rp.life -= deltaTime;
+      if (rp.life <= 0 || rp.r >= rp.maxR || rp.y > this.height) {
+        this.roadRipples.splice(i, 1);
+      }
+    }
+  }
+
+  drawRipples() {
+    if (!this.roadRipples.length) return;
+    const ctx = this.ctx;
+    ctx.save();
+    this.roadRipples.forEach(rp => {
+      const a = Math.max(0, rp.life / rp.maxLife) * 0.28;
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = 'rgba(174, 219, 255, 0.9)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.ellipse(rp.x, rp.y, rp.r, rp.r * 0.4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // ─── Friction Sparks ─────────────────────────────────────────────────────
+
+  spawnFrictionSparks() {
+    const lx = this.playerX + 8;
+    const rx = this.playerX + this.playerWidth - 8;
+    const py = this.playerY + this.playerHeight - 14;
+
+    for (const tx of [lx, rx]) {
+      for (let i = 0; i < 3; i++) {
+        const angle = (Math.PI * 0.5) + (Math.random() - 0.5) * 1.2;
+        const speed = 2 + Math.random() * 5;
+        this.particles.push({
+          x: tx,
+          y: py,
+          vx: Math.cos(angle) * speed * (Math.random() > 0.5 ? 1 : -1),
+          vy: Math.sin(angle) * speed + this.currentSpeed * 0.4,
+          size: 1 + Math.random() * 1.5,
+          color: Math.random() > 0.5 ? '#ff7700' : '#ffcc00',
+          glow: true,
+          life: 0.22,
+          maxLife: 0.22
+        });
+      }
     }
   }
 }
