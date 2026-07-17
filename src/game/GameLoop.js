@@ -32,15 +32,15 @@ export class GameLoop {
     this.speedRatio = 0;
     this.score = 0;
     this.coins = 0;
-    this.lives = carConfig.id === 'sentinel' ? 4 : 3; // Sentinel gets 4 lives
+    this.lives = (carConfig.id === 'sentinel' || carConfig.id === 'cybertruck') ? 4 : 3; // Sentinel & Cybertruck get 4 lives
     this.fuel = 100;
     this.nitro = 25;
     this.invulnerableTime = 0;
     this.isBoosting = false;
 
     // Player Positioning
-    this.playerWidth = carConfig.id === 'sentinel' ? 52 : 42; 
-    this.playerHeight = carConfig.id === 'sentinel' ? 88 : 78;
+    this.playerWidth = carConfig.id === 'sentinel' ? 52 : (carConfig.id === 'cybertruck' ? 50 : (carConfig.id === 'lightcycle' ? 26 : 42)); 
+    this.playerHeight = carConfig.id === 'sentinel' ? 88 : (carConfig.id === 'cybertruck' ? 86 : (carConfig.id === 'lightcycle' ? 72 : 78));
     this.playerLane = 1.5; 
     this.playerX = this.getLaneCenterX(this.playerLane) - this.playerWidth / 2;
     this.playerY = this.height - 120;
@@ -508,8 +508,8 @@ export class GameLoop {
     ctx.translate(cx, cy);
     ctx.rotate(this.bodyRoll);
 
-    // 1. Draw wheels if not the floating Hyper Phantom
-    if (id !== 'phantom') {
+    // 1. Draw wheels if not the floating Hyper Phantom or Tron Lightcycle
+    if (id !== 'phantom' && id !== 'lightcycle') {
       const wheelWidth = id === 'sentinel' ? 8 : 6.5;
       const wheelHeight = id === 'sentinel' ? 18 : 15;
 
@@ -843,6 +843,96 @@ export class GameLoop {
       ctx.arc(0, 5, coreRadius, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
+    } else if (id === 'cybertruck') {
+      // Angular low-poly stainless steel cybertruck design
+      ctx.fillStyle = '#6e7075';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      
+      // Draw angular polygon body shape
+      ctx.beginPath();
+      ctx.moveTo(-w/2, h/2); // back left
+      ctx.lineTo(-w/2 + 3, -h/2 + 20); // front side left
+      ctx.lineTo(-w/3, -h/2); // nose left
+      ctx.lineTo(w/3, -h/2); // nose right
+      ctx.lineTo(w/2 - 3, -h/2 + 20); // front side right
+      ctx.lineTo(w/2, h/2); // back right
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Sharp geometric panel stripes (e.g. hood angles)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-w/3, -h/2);
+      ctx.lineTo(-w/4, -h/4);
+      ctx.lineTo(w/4, -h/4);
+      ctx.lineTo(w/3, -h/2);
+      ctx.stroke();
+
+      // Flat angular windshield
+      ctx.fillStyle = 'rgba(200, 220, 240, 0.35)';
+      ctx.beginPath();
+      ctx.moveTo(-w/2.5, -h/5);
+      ctx.lineTo(-w/3, -h/2.8);
+      ctx.lineTo(w/3, -h/2.8);
+      ctx.lineTo(w/2.5, -h/5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Lightbar at the front (full width white stripe)
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(-w/3 + 2, -h/2 + 1, (w * 2/3) - 4, 3);
+      ctx.shadowBlur = 0;
+
+      // Heavy wheel wells / armored guards
+      ctx.fillStyle = '#1c1d21';
+      ctx.fillRect(-w/2 - 1, -h/4, 2, 18);
+      ctx.fillRect(w/2 - 1, -h/4, 2, 18);
+      ctx.fillRect(-w/2 - 1, h/4, 2, 18);
+      ctx.fillRect(w/2 - 1, h/4, 2, 18);
+
+    } else if (id === 'lightcycle') {
+      // Streamlined futuristic neon Tron-like motorcycle capsule
+      ctx.fillStyle = '#051408';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.2;
+      
+      // Capsule shape
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2, w, h, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      // Center glowing neon spine trail
+      ctx.strokeStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -h/2.5);
+      ctx.lineTo(0, h/2.5);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Enclosed neon wheel wells
+      ctx.fillStyle = '#000000';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(-w/4, -h/2 + 6, w/2, 18, 4);
+      ctx.roundRect(-w/4, h/2 - 24, w/2, 18, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      // Transparent green glass bubble cabin canopy
+      ctx.fillStyle = 'rgba(0, 255, 102, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(0, -h/8, w/3.2, h/9, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     // 4. Draw headlights & light beams
@@ -1446,6 +1536,28 @@ export class GameLoop {
       });
 
       this.options.onHit(); 
+      return;
+    }
+
+    // Cybertruck Steel Exoskeleton perk: hits traffic for 40% fuel/energy cell loss instead of losing a life, as long as fuel is above 40%.
+    if (this.carConfig.id === 'cybertruck' && this.fuel > 40) {
+      this.fuel = Math.max(0, this.fuel - 40);
+      this.options.onFuelUpdate(this.fuel);
+      this.spawnCrashExplosion(trafficCar.x + trafficCar.width / 2, trafficCar.y + trafficCar.height / 2, 'rgba(161, 161, 170, 0.95)', 15);
+      this.traffic.splice(index, 1);
+      
+      audio.playCrash();
+      this.options.onHit();
+      this.invulnerableTime = 1.5; 
+
+      this.floatingTexts.push({
+        x: this.playerX + this.playerWidth / 2,
+        y: this.playerY - 20,
+        text: "-40% CELL ABSORPTION",
+        color: '#a1a1aa',
+        alpha: 1,
+        age: 0
+      });
       return;
     }
 
