@@ -7,7 +7,7 @@ import GameDashboard from './components/GameDashboard';
 import GameEngine from './game/GameEngine';
 import { audio } from './utils/audio';
 
-// Expanded Cars Database (8 Vehicles: Added Street Racers Apex GT and Carbon Cobra)
+// Expanded Cars Database (10 Vehicles: Added Cybertruck and Lightcycle, all free!)
 export const CARS = [
   {
     id: 'roadster',
@@ -30,7 +30,7 @@ export const CARS = [
     perkName: 'Shield Capacitor',
     perkDesc: 'Starts game with a shielding field active.',
     color: '#9d4edd', // neon purple
-    price: 150,
+    price: 0,
     trail: 'rgba(157, 78, 221, 0.4)'
   },
   {
@@ -42,7 +42,7 @@ export const CARS = [
     perkName: 'Tuning Drift',
     perkDesc: 'Vehicle lateral handling increases by 15% during active Nitro boosts.',
     color: '#ff5722', // neon orange
-    price: 300,
+    price: 0,
     trail: 'rgba(255, 87, 34, 0.4)'
   },
   {
@@ -54,7 +54,7 @@ export const CARS = [
     perkName: 'Data Double',
     perkDesc: 'All network coins collected are worth double value.',
     color: '#ffd700', // neon yellow
-    price: 450,
+    price: 0,
     trail: 'rgba(255, 215, 0, 0.4)'
   },
   {
@@ -66,7 +66,7 @@ export const CARS = [
     perkName: 'Ram Charger',
     perkDesc: 'Hitting traffic during active Nitro crushes obstacles for +200 points without crashing.',
     color: '#e91e63', // hot pink
-    price: 600,
+    price: 0,
     trail: 'rgba(233, 30, 99, 0.4)'
   },
   {
@@ -78,7 +78,7 @@ export const CARS = [
     perkName: 'Nitro Burst',
     perkDesc: 'Nitro refills and charges 50% faster.',
     color: '#ff007f', // neon pink
-    price: 750,
+    price: 0,
     trail: 'rgba(255, 0, 127, 0.4)'
   },
   {
@@ -90,7 +90,7 @@ export const CARS = [
     perkName: 'Heavy Armor',
     perkDesc: 'Starts with 4 lives. Energy cell decays 25% slower.',
     color: '#39ff14', // neon green
-    price: 900,
+    price: 0,
     trail: 'rgba(57, 255, 20, 0.4)'
   },
   {
@@ -102,8 +102,32 @@ export const CARS = [
     perkName: 'Cell Attractor',
     perkDesc: 'Magnets attract fuel energy canisters in addition to coins.',
     color: '#ffffff', // bright white
-    price: 1100,
+    price: 0,
     trail: 'rgba(255, 255, 255, 0.4)'
+  },
+  {
+    id: 'cybertruck',
+    name: 'Blueprints Cybertruck',
+    description: 'Angular low-poly tank built with stainless steel alloys. Heavy impact shield.',
+    speed: 70,
+    handling: 52,
+    perkName: 'Steel Exoskeleton',
+    perkDesc: 'Starts with 4 lives. Hits traffic for only 40% energy cell loss instead of losing a life.',
+    color: '#a1a1aa', // steel grey
+    price: 0,
+    trail: 'rgba(161, 161, 170, 0.4)'
+  },
+  {
+    id: 'lightcycle',
+    name: 'Vector Lightcycle',
+    description: 'Ultra-narrow grid-skimming neon motorcycle. Exceptional agility and profile.',
+    speed: 92,
+    handling: 98,
+    perkName: 'Slipstream Profile',
+    perkDesc: 'Extremely narrow 26px vehicle hitbox allowing effortless lane splitting.',
+    color: '#00ff66', // neon lime
+    price: 0,
+    trail: 'rgba(0, 255, 102, 0.4)'
   }
 ];
 
@@ -112,7 +136,7 @@ function App() {
   const [selectedCar, setSelectedCar] = useState(CARS[0]);
   const [highScore, setHighScore] = useState(0);
   const [coins, setCoins] = useState(0);
-  const [unlockedCars, setUnlockedCars] = useState(['roadster']);
+  const [unlockedCars, setUnlockedCars] = useState(CARS.map(c => c.id));
   const [upgrades, setUpgrades] = useState({
     roadster: { speed: 1, handling: 1 },
     cruiser: { speed: 1, handling: 1 },
@@ -121,7 +145,9 @@ function App() {
     cobra: { speed: 1, handling: 1 },
     demon: { speed: 1, handling: 1 },
     sentinel: { speed: 1, handling: 1 },
-    phantom: { speed: 1, handling: 1 }
+    phantom: { speed: 1, handling: 1 },
+    cybertruck: { speed: 1, handling: 1 },
+    lightcycle: { speed: 1, handling: 1 }
   });
   
   // Game metrics (sent from Canvas Game Loop)
@@ -152,10 +178,15 @@ function App() {
     if (savedCoins) setCoins(parseInt(savedCoins, 10));
     if (savedUnlocked) {
       try {
-        setUnlockedCars(JSON.parse(savedUnlocked));
+        const parsed = JSON.parse(savedUnlocked);
+        const allIds = CARS.map(c => c.id);
+        const merged = Array.from(new Set([...parsed, ...allIds]));
+        setUnlockedCars(merged);
       } catch (e) {
-        setUnlockedCars(['roadster']);
+        setUnlockedCars(CARS.map(c => c.id));
       }
+    } else {
+      setUnlockedCars(CARS.map(c => c.id));
     }
     if (savedUpgrades) {
       try {
@@ -202,8 +233,8 @@ function App() {
     setScore(0);
     setSessionCoins(0);
     
-    // Sentinel has 4 lives, others have 3
-    const startLives = selectedCar.id === 'sentinel' ? 4 : 3;
+    // Sentinel & Cybertruck start with 4 lives, others have 3
+    const startLives = (selectedCar.id === 'sentinel' || selectedCar.id === 'cybertruck') ? 4 : 3;
     setLives(startLives);
     
     setFuel(100);
