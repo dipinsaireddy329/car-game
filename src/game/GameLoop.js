@@ -26,9 +26,9 @@ export class GameLoop {
     // Base speed and stats scaling
     this.baseSpeed = 6;
     this.currentSpeed = this.baseSpeed;
-    this.maxNormalSpeed = (12 + (carConfig.speed / 100) * 4) * (1 + (speedLvl - 1) * 0.08); 
+    this.maxNormalSpeed = (12 + (carConfig.speed / 100) * 4) * (1 + (speedLvl - 1) * 0.08);
     this.handlingFactor = (0.07 + (carConfig.handling / 100) * 0.07) * (1 + (handlingLvl - 1) * 0.10);
-    
+
     this.speedRatio = 0;
     this.score = 0;
     this.coins = 0;
@@ -39,18 +39,18 @@ export class GameLoop {
     this.isBoosting = false;
 
     // Player Positioning
-    this.playerWidth = carConfig.id === 'sentinel' ? 52 : (carConfig.id === 'cybertruck' ? 50 : (carConfig.id === 'lightcycle' ? 26 : 42)); 
+    this.playerWidth = carConfig.id === 'sentinel' ? 52 : (carConfig.id === 'cybertruck' ? 50 : (carConfig.id === 'lightcycle' ? 26 : 42));
     this.playerHeight = carConfig.id === 'sentinel' ? 88 : (carConfig.id === 'cybertruck' ? 86 : (carConfig.id === 'lightcycle' ? 72 : 78));
-    this.playerLane = 1.5; 
+    this.playerLane = 1.5;
     this.playerX = this.getLaneCenterX(this.playerLane) - this.playerWidth / 2;
     this.playerY = this.height - 120;
-    
+
     // Power-ups State
     this.shieldActive = carConfig.id === 'cruiser'; // Cruiser starting shield perk
     this.shieldTimer = carConfig.id === 'cruiser' ? 999999 : 0;
     this.magnetActive = false;
     this.magnetTimer = 0;
-    
+
     // Scenery & Dynamic Elements Arrays
     this.traffic = [];
     this.items = [];
@@ -58,7 +58,7 @@ export class GameLoop {
     this.rainDrops = [];
     this.scenery = [];
     this.floatingTexts = [];
-    
+
     // Timers
     this.trafficSpawnTimer = 0;
     this.itemSpawnTimer = 0;
@@ -79,7 +79,7 @@ export class GameLoop {
     this.lastSkidRightY = undefined;
 
     // Advanced Visual Systems
-    this.gantries = [];            // Scrolling 3D neon arch gantries
+    this.gantries = [];            // Scrolling 3D Dipin arch gantries
     this.gantrySpawnTimer = 0;
     this.roadRipples = [];         // Rain splash concentric ripples on asphalt
     this.warpScale = 1.0;          // Canvas zoom scale during Nitro warp
@@ -105,7 +105,7 @@ export class GameLoop {
       const x = isLeft ? 5 + Math.random() * 15 : this.width - w - 5 - Math.random() * 15;
       const y = (i * 140) + Math.random() * 40;
 
-      const billboards = ['NEON', 'GRID', 'RUN', 'SYS', 'XP', 'DATA'];
+      const billboards = ['Dipin', 'GRID', 'RUN', 'SYS', 'XP', 'DATA'];
       const signText = Math.random() > 0.6 ? billboards[Math.floor(Math.random() * billboards.length)] : null;
 
       this.scenery.push({
@@ -115,7 +115,7 @@ export class GameLoop {
         height: h,
         isLeft,
         color: `hsl(${260 + Math.random() * 60}, 50%, ${10 + Math.random() * 12}%)`,
-        lightColor: Math.random() > 0.5 ? 'var(--neon-cyan)' : 'var(--neon-pink)',
+        lightColor: Math.random() > 0.5 ? 'var(--Dipin-cyan)' : 'var(--Dipin-pink)',
         signText
       });
     }
@@ -220,7 +220,7 @@ export class GameLoop {
         }
       }
     }
-    
+
     this.options.onNitroUpdate(this.nitro);
     this.options.onSpeedUpdate(this.currentSpeed / (this.maxNormalSpeed * 1.7));
     audio.updateEnginePitch(this.currentSpeed / (this.maxNormalSpeed * 1.7));
@@ -441,7 +441,7 @@ export class GameLoop {
     // Shoulders (lane borders)
     this.ctx.save();
     this.ctx.shadowBlur = 12;
-    this.ctx.fillStyle = 'rgba(255, 0, 127, 0.7)'; // neon pink rail borders
+    this.ctx.fillStyle = 'rgba(255, 0, 127, 0.7)'; // Dipin pink rail borders
     this.ctx.shadowColor = 'rgba(255, 0, 127, 0.4)';
     this.ctx.fillRect(this.roadLeft - 4, 0, 4, this.height);
     this.ctx.fillRect(this.roadRight, 0, 4, this.height);
@@ -488,13 +488,13 @@ export class GameLoop {
     ctx.globalCompositeOperation = 'screen';
     const beamLength = 200;
     const beamWidth = 65;
-    
+
     const grad = ctx.createLinearGradient(lx, ly, lx, ly - beamLength);
     grad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
     grad.addColorStop(0.18, 'rgba(255, 255, 255, 0.22)');
     grad.addColorStop(0.6, `${color}25`); // transparent accent color
     grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    
+
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.moveTo(lx, ly);
@@ -524,7 +524,7 @@ export class GameLoop {
     const pxLeft = this.playerX + 6;
     const pxRight = this.playerX + this.playerWidth - 6;
     const py = this.playerY + this.playerHeight - 16;
-    
+
     for (let tx of [pxLeft, pxRight]) {
       if (Math.random() < 0.4) {
         this.particles.push({
@@ -559,7 +559,7 @@ export class GameLoop {
     const cy = y + h / 2;
 
     ctx.save();
-    
+
     // Pulsing Underglow on the road
     const pulseFactor = 0.85 + Math.sin(Date.now() / 100) * 0.15;
     const underglowGrad = ctx.createRadialGradient(cx, cy, w * 0.5, cx, cy, h * 0.9);
@@ -583,14 +583,14 @@ export class GameLoop {
       // Front wheels steer left/right
       // Front Left
       ctx.save();
-      ctx.translate(-w/2 + 2.5, -h/2 + 20);
+      ctx.translate(-w / 2 + 2.5, -h / 2 + 20);
       ctx.rotate(this.steerAngle);
       this.drawWheelSprite(wheelWidth, wheelHeight, color);
       ctx.restore();
 
       // Front Right
       ctx.save();
-      ctx.translate(w/2 - 2.5, -h/2 + 20);
+      ctx.translate(w / 2 - 2.5, -h / 2 + 20);
       ctx.rotate(this.steerAngle);
       this.drawWheelSprite(wheelWidth, wheelHeight, color);
       ctx.restore();
@@ -598,13 +598,13 @@ export class GameLoop {
       // Rear wheels remain straight
       // Rear Left
       ctx.save();
-      ctx.translate(-w/2 + 2.5, h/2 - 18);
+      ctx.translate(-w / 2 + 2.5, h / 2 - 18);
       this.drawWheelSprite(wheelWidth, wheelHeight, color);
       ctx.restore();
 
       // Rear Right
       ctx.save();
-      ctx.translate(w/2 - 2.5, h/2 - 18);
+      ctx.translate(w / 2 - 2.5, h / 2 - 18);
       this.drawWheelSprite(wheelWidth, wheelHeight, color);
       ctx.restore();
     }
@@ -619,9 +619,9 @@ export class GameLoop {
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, -h/2);
-      ctx.lineTo(w/2, h/2 - 12);
-      ctx.lineTo(-w/2, h/2 - 12);
+      ctx.moveTo(0, -h / 2);
+      ctx.lineTo(w / 2, h / 2 - 12);
+      ctx.lineTo(-w / 2, h / 2 - 12);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
@@ -630,128 +630,128 @@ export class GameLoop {
       ctx.strokeStyle = `${color}88`;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(0, -h/2 + 15);
-      ctx.lineTo(0, h/2 - 22);
+      ctx.moveTo(0, -h / 2 + 15);
+      ctx.lineTo(0, h / 2 - 22);
       ctx.stroke();
 
       // Windshield
-      const windshieldGrad = ctx.createLinearGradient(0, -h/6, 0, h/10);
+      const windshieldGrad = ctx.createLinearGradient(0, -h / 6, 0, h / 10);
       windshieldGrad.addColorStop(0, 'rgba(0, 240, 255, 0.7)');
       windshieldGrad.addColorStop(1, 'rgba(0, 80, 120, 0.35)');
       ctx.fillStyle = windshieldGrad;
       ctx.beginPath();
-      ctx.moveTo(0, -h/6);
-      ctx.lineTo(w/3.5, h/10);
-      ctx.lineTo(-w/3.5, h/10);
+      ctx.moveTo(0, -h / 6);
+      ctx.lineTo(w / 3.5, h / 10);
+      ctx.lineTo(-w / 3.5, h / 10);
       ctx.closePath();
       ctx.fill();
 
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
       ctx.beginPath();
-      ctx.moveTo(-w/4.8, h/10 - 2);
-      ctx.lineTo(0, -h/6 + 4);
+      ctx.moveTo(-w / 4.8, h / 10 - 2);
+      ctx.lineTo(0, -h / 6 + 4);
       ctx.stroke();
 
       // Rear spoiler
       ctx.fillStyle = '#050508';
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.5;
-      ctx.fillRect(-w/2 - 2, h/2 - 16, w + 4, 4);
+      ctx.fillRect(-w / 2 - 2, h / 2 - 16, w + 4, 4);
 
     } else if (id === 'cruiser') {
       ctx.fillStyle = '#100a1c';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.roundRect(-w/2, -h/2 + 2, w, h - 4, 10);
+      ctx.roundRect(-w / 2, -h / 2 + 2, w, h - 4, 10);
       ctx.fill();
       ctx.stroke();
 
       // Front push-bumper bars
       ctx.fillStyle = '#22222d';
-      ctx.fillRect(-w/3.2, -h/2 - 1, w * 2/3.2, 4);
+      ctx.fillRect(-w / 3.2, -h / 2 - 1, w * 2 / 3.2, 4);
 
       // Armored side skirts
       ctx.fillStyle = '#06030b';
-      ctx.fillRect(-w/2 - 2, -h/4, 2, h/2);
-      ctx.fillRect(w/2, -h/4, 2, h/2);
+      ctx.fillRect(-w / 2 - 2, -h / 4, 2, h / 2);
+      ctx.fillRect(w / 2, -h / 4, 2, h / 2);
 
       // Divided windshield segments
       ctx.fillStyle = 'rgba(157, 78, 221, 0.55)';
-      ctx.fillRect(-w/3.2, -h/5, w/1.6, h/8);
+      ctx.fillRect(-w / 3.2, -h / 5, w / 1.6, h / 8);
       ctx.fillStyle = '#100a1c';
-      ctx.fillRect(-1, -h/5, 2, h/8);
+      ctx.fillRect(-1, -h / 5, 2, h / 8);
 
       // Spoiler
       ctx.fillStyle = '#181226';
-      ctx.fillRect(-w/2 + 6, h/2 - 7, w - 12, 4);
+      ctx.fillRect(-w / 2 + 6, h / 2 - 7, w - 12, 4);
 
     } else if (id === 'gt') {
       ctx.fillStyle = '#1a0b04';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(-w/2, -h/2 + 4, w, h - 8, 7);
+      ctx.roundRect(-w / 2, -h / 2 + 4, w, h - 8, 7);
       ctx.fill();
       ctx.stroke();
 
       // Fender flares
       ctx.strokeStyle = `${color}aa`;
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(-w/2 - 1, -h/2 + 18, 1, 15);
-      ctx.strokeRect(w/2, -h/2 + 18, 1, 15);
-      ctx.strokeRect(-w/2 - 1, h/2 - 28, 1, 15);
-      ctx.strokeRect(w/2, h/2 - 28, 1, 15);
+      ctx.strokeRect(-w / 2 - 1, -h / 2 + 18, 1, 15);
+      ctx.strokeRect(w / 2, -h / 2 + 18, 1, 15);
+      ctx.strokeRect(-w / 2 - 1, h / 2 - 28, 1, 15);
+      ctx.strokeRect(w / 2, h / 2 - 28, 1, 15);
 
       // Carbon fiber hood details
       ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-      ctx.fillRect(-w/4, -h/2 + 10, w/2, h/4);
+      ctx.fillRect(-w / 4, -h / 2 + 10, w / 2, h / 4);
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
       ctx.lineWidth = 1;
-      for (let offset = -w/4 + 2; offset < w/4; offset += 3.5) {
+      for (let offset = -w / 4 + 2; offset < w / 4; offset += 3.5) {
         ctx.beginPath();
-        ctx.moveTo(offset, -h/2 + 10);
-        ctx.lineTo(offset + 1.8, -h/2 + 10 + h/4);
+        ctx.moveTo(offset, -h / 2 + 10);
+        ctx.lineTo(offset + 1.8, -h / 2 + 10 + h / 4);
         ctx.stroke();
       }
 
       // Windshield
-      const gtWinGrad = ctx.createLinearGradient(0, -h/8, 0, h/15);
+      const gtWinGrad = ctx.createLinearGradient(0, -h / 8, 0, h / 15);
       gtWinGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
       gtWinGrad.addColorStop(1, 'rgba(255, 87, 34, 0.25)');
       ctx.fillStyle = gtWinGrad;
       ctx.beginPath();
-      ctx.roundRect(-w/3.5, -h/8, w/1.75, h/8, 2);
+      ctx.roundRect(-w / 3.5, -h / 8, w / 1.75, h / 8, 2);
       ctx.fill();
 
       // Tuning spoiler
       ctx.fillStyle = '#0c0502';
-      ctx.fillRect(-w/2 - 3, h/2 - 7, w + 6, 3);
+      ctx.fillRect(-w / 2 - 3, h / 2 - 7, w + 6, 3);
       ctx.fillStyle = color;
-      ctx.fillRect(-w/2 - 3, h/2 - 11, 2, 4);
-      ctx.fillRect(w/2 + 1, h/2 - 11, 2, 4);
+      ctx.fillRect(-w / 2 - 3, h / 2 - 11, 2, 4);
+      ctx.fillRect(w / 2 + 1, h / 2 - 11, 2, 4);
 
     } else if (id === 'police') {
       ctx.fillStyle = '#080a0f';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2.2;
       ctx.beginPath();
-      ctx.roundRect(-w/2, -h/2 + 4, w, h - 8, 9);
+      ctx.roundRect(-w / 2, -h / 2 + 4, w, h - 8, 9);
       ctx.fill();
       ctx.stroke();
 
       // White panel decals
       ctx.fillStyle = '#e6e8f0';
       ctx.beginPath();
-      ctx.roundRect(-w/3.5, -h/2 + 8, w/1.75, h/3.5, 4);
+      ctx.roundRect(-w / 3.5, -h / 2 + 8, w / 1.75, h / 3.5, 4);
       ctx.fill();
 
       ctx.fillStyle = '#444';
-      ctx.fillRect(-w/4, -h/2 - 1, w/2, 4);
+      ctx.fillRect(-w / 4, -h / 2 - 1, w / 2, 4);
 
       // Windshield
       ctx.fillStyle = 'rgba(255, 215, 0, 0.32)';
-      ctx.fillRect(-w/3.2, -h/9, w/1.6, h/9);
+      ctx.fillRect(-w / 3.2, -h / 9, w / 1.6, h / 9);
 
       // Sirens
       const isRed = this.sirenFlashState < 10;
@@ -765,10 +765,10 @@ export class GameLoop {
       ctx.strokeStyle = '#888';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(-w/4, h/2 - 8);
-      ctx.lineTo(-w/4, h/2 - 20);
-      ctx.moveTo(w/4, h/2 - 8);
-      ctx.lineTo(w/4, h/2 - 20);
+      ctx.moveTo(-w / 4, h / 2 - 8);
+      ctx.lineTo(-w / 4, h / 2 - 20);
+      ctx.moveTo(w / 4, h / 2 - 8);
+      ctx.lineTo(w / 4, h / 2 - 20);
       ctx.stroke();
 
     } else if (id === 'cobra') {
@@ -776,51 +776,51 @@ export class GameLoop {
       ctx.strokeStyle = color;
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.roundRect(-w/2, -h/2 + 2, w, h - 4, 4);
+      ctx.roundRect(-w / 2, -h / 2 + 2, w, h - 4, 4);
       ctx.fill();
       ctx.stroke();
 
       // Double white stripes
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(-5, -h/2 + 2, 3, h - 4);
-      ctx.fillRect(2, -h/2 + 2, 3, h - 4);
+      ctx.fillRect(-5, -h / 2 + 2, 3, h - 4);
+      ctx.fillRect(2, -h / 2 + 2, 3, h - 4);
 
       // Hood scoop
       ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(-4, -h/4, 8, 12);
+      ctx.fillRect(-4, -h / 4, 8, 12);
       ctx.fillStyle = '#222';
-      ctx.fillRect(-2, -h/4 + 2, 4, 8);
+      ctx.fillRect(-2, -h / 4 + 2, 4, 8);
 
       // Windshield
       ctx.fillStyle = 'rgba(233, 30, 99, 0.35)';
-      ctx.fillRect(-w/3.2, -h/12, w/1.6, h/9);
+      ctx.fillRect(-w / 3.2, -h / 12, w / 1.6, h / 9);
 
       // Low deck spoiler
       ctx.fillStyle = '#111';
-      ctx.fillRect(-w/2 + 2, h/2 - 7, w - 4, 3);
+      ctx.fillRect(-w / 2 + 2, h / 2 - 7, w - 4, 3);
 
     } else if (id === 'demon') {
       ctx.fillStyle = '#16020c';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, -h/2);
-      ctx.lineTo(w/2 - 3, -h/4);
-      ctx.lineTo(w/2, h/2 - 6);
-      ctx.lineTo(-w/2, h/2 - 6);
-      ctx.lineTo(-w/2 + 3, -h/4);
+      ctx.moveTo(0, -h / 2);
+      ctx.lineTo(w / 2 - 3, -h / 4);
+      ctx.lineTo(w / 2, h / 2 - 6);
+      ctx.lineTo(-w / 2, h / 2 - 6);
+      ctx.lineTo(-w / 2 + 3, -h / 4);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
       // jet cockpit
-      const demonWin = ctx.createRadialGradient(0, -h/8, 1, 0, -h/8, w/3.5);
+      const demonWin = ctx.createRadialGradient(0, -h / 8, 1, 0, -h / 8, w / 3.5);
       demonWin.addColorStop(0, '#ffffff');
       demonWin.addColorStop(0.5, 'rgba(255, 0, 127, 0.85)');
       demonWin.addColorStop(1, 'rgba(10, 2, 6, 0.9)');
       ctx.fillStyle = demonWin;
       ctx.beginPath();
-      ctx.ellipse(0, -h/8, w/5, h/8, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -h / 8, w / 5, h / 8, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Reactor engine
@@ -828,9 +828,9 @@ export class GameLoop {
       ctx.shadowColor = '#ff5500';
       ctx.shadowBlur = 12 * pulseEngine;
       ctx.fillStyle = '#ff3300';
-      ctx.fillRect(-6, h/4, 12, 10);
+      ctx.fillRect(-6, h / 4, 12, 10);
       ctx.fillStyle = '#ffff00';
-      ctx.fillRect(-3, h/4 + 2, 6, 6);
+      ctx.fillRect(-3, h / 4 + 2, 6, 6);
       ctx.shadowBlur = 0;
 
     } else if (id === 'sentinel') {
@@ -838,42 +838,42 @@ export class GameLoop {
       ctx.strokeStyle = color;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.roundRect(-w/2, -h/2, w, h, 6);
+      ctx.roundRect(-w / 2, -h / 2, w, h, 6);
       ctx.fill();
       ctx.stroke();
 
       // front grill
       ctx.fillStyle = '#151515';
-      ctx.fillRect(-w/3, -h/2 + 4, w * 2/3, 8);
+      ctx.fillRect(-w / 3, -h / 2 + 4, w * 2 / 3, 8);
       ctx.fillStyle = color;
-      for (let offset = -w/3 + 3; offset < w/3; offset += 5.5) {
-        ctx.fillRect(offset, -h/2 + 5, 2, 6);
+      for (let offset = -w / 3 + 3; offset < w / 3; offset += 5.5) {
+        ctx.fillRect(offset, -h / 2 + 5, 2, 6);
       }
 
       // windshield
       ctx.fillStyle = 'rgba(57, 255, 20, 0.35)';
-      ctx.fillRect(-w/2.5, -h/4, w * 2/2.5, h/10);
+      ctx.fillRect(-w / 2.5, -h / 4, w * 2 / 2.5, h / 10);
 
       // roof searchlights
       ctx.fillStyle = '#333';
-      ctx.fillRect(-w/3, -h/4 - 4, 6, 4);
-      ctx.fillRect(w/3 - 6, -h/4 - 4, 6, 4);
+      ctx.fillRect(-w / 3, -h / 4 - 4, 6, 4);
+      ctx.fillRect(w / 3 - 6, -h / 4 - 4, 6, 4);
       ctx.fillStyle = '#fffae0';
       ctx.beginPath();
-      ctx.arc(-w/3 + 3, -h/4 - 4, 2.5, 0, Math.PI * 2);
-      ctx.arc(w/3 - 3, -h/4 - 4, 2.5, 0, Math.PI * 2);
+      ctx.arc(-w / 3 + 3, -h / 4 - 4, 2.5, 0, Math.PI * 2);
+      ctx.arc(w / 3 - 3, -h / 4 - 4, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
       // flatbed rear cover
       ctx.fillStyle = '#092412';
-      ctx.fillRect(-w/2 + 4, h/8, w - 8, h * 3/8 - 4);
+      ctx.fillRect(-w / 2 + 4, h / 8, w - 8, h * 3 / 8 - 4);
 
     } else if (id === 'phantom') {
       ctx.fillStyle = '#1c1c22';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -884,17 +884,17 @@ export class GameLoop {
       ctx.shadowBlur = 10 * hoverPulse;
       ctx.fillStyle = '#00ffff';
       ctx.beginPath();
-      ctx.arc(-w/2 + 4.5, -h/3, 4.5, 0, Math.PI * 2);
-      ctx.arc(w/2 - 4.5, -h/3, 4.5, 0, Math.PI * 2);
-      ctx.arc(-w/2 + 4.5, h/3, 4.5, 0, Math.PI * 2);
-      ctx.arc(w/2 - 4.5, h/3, 4.5, 0, Math.PI * 2);
+      ctx.arc(-w / 2 + 4.5, -h / 3, 4.5, 0, Math.PI * 2);
+      ctx.arc(w / 2 - 4.5, -h / 3, 4.5, 0, Math.PI * 2);
+      ctx.arc(-w / 2 + 4.5, h / 3, 4.5, 0, Math.PI * 2);
+      ctx.arc(w / 2 - 4.5, h / 3, 4.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
       // canopy
       ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
       ctx.beginPath();
-      ctx.ellipse(0, -h/6, w/3.5, h/10, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -h / 6, w / 3.5, h / 10, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // reactor core
@@ -915,15 +915,15 @@ export class GameLoop {
       ctx.fillStyle = '#6e7075';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2.5;
-      
+
       // Draw angular polygon body shape
       ctx.beginPath();
-      ctx.moveTo(-w/2, h/2); // back left
-      ctx.lineTo(-w/2 + 3, -h/2 + 20); // front side left
-      ctx.lineTo(-w/3, -h/2); // nose left
-      ctx.lineTo(w/3, -h/2); // nose right
-      ctx.lineTo(w/2 - 3, -h/2 + 20); // front side right
-      ctx.lineTo(w/2, h/2); // back right
+      ctx.moveTo(-w / 2, h / 2); // back left
+      ctx.lineTo(-w / 2 + 3, -h / 2 + 20); // front side left
+      ctx.lineTo(-w / 3, -h / 2); // nose left
+      ctx.lineTo(w / 3, -h / 2); // nose right
+      ctx.lineTo(w / 2 - 3, -h / 2 + 20); // front side right
+      ctx.lineTo(w / 2, h / 2); // back right
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
@@ -932,19 +932,19 @@ export class GameLoop {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(-w/3, -h/2);
-      ctx.lineTo(-w/4, -h/4);
-      ctx.lineTo(w/4, -h/4);
-      ctx.lineTo(w/3, -h/2);
+      ctx.moveTo(-w / 3, -h / 2);
+      ctx.lineTo(-w / 4, -h / 4);
+      ctx.lineTo(w / 4, -h / 4);
+      ctx.lineTo(w / 3, -h / 2);
       ctx.stroke();
 
       // Flat angular windshield
       ctx.fillStyle = 'rgba(200, 220, 240, 0.35)';
       ctx.beginPath();
-      ctx.moveTo(-w/2.5, -h/5);
-      ctx.lineTo(-w/3, -h/2.8);
-      ctx.lineTo(w/3, -h/2.8);
-      ctx.lineTo(w/2.5, -h/5);
+      ctx.moveTo(-w / 2.5, -h / 5);
+      ctx.lineTo(-w / 3, -h / 2.8);
+      ctx.lineTo(w / 3, -h / 2.8);
+      ctx.lineTo(w / 2.5, -h / 5);
       ctx.closePath();
       ctx.fill();
 
@@ -952,60 +952,60 @@ export class GameLoop {
       ctx.fillStyle = '#ffffff';
       ctx.shadowColor = '#ffffff';
       ctx.shadowBlur = 10;
-      ctx.fillRect(-w/3 + 2, -h/2 + 1, (w * 2/3) - 4, 3);
+      ctx.fillRect(-w / 3 + 2, -h / 2 + 1, (w * 2 / 3) - 4, 3);
       ctx.shadowBlur = 0;
 
       // Heavy wheel wells / armored guards
       ctx.fillStyle = '#1c1d21';
-      ctx.fillRect(-w/2 - 1, -h/4, 2, 18);
-      ctx.fillRect(w/2 - 1, -h/4, 2, 18);
-      ctx.fillRect(-w/2 - 1, h/4, 2, 18);
-      ctx.fillRect(w/2 - 1, h/4, 2, 18);
+      ctx.fillRect(-w / 2 - 1, -h / 4, 2, 18);
+      ctx.fillRect(w / 2 - 1, -h / 4, 2, 18);
+      ctx.fillRect(-w / 2 - 1, h / 4, 2, 18);
+      ctx.fillRect(w / 2 - 1, h / 4, 2, 18);
 
     } else if (id === 'lightcycle') {
-      // Streamlined futuristic neon Tron-like motorcycle capsule
+      // Streamlined futuristic Dipin Tron-like motorcycle capsule
       ctx.fillStyle = '#051408';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2.2;
-      
+
       // Capsule shape
       ctx.beginPath();
-      ctx.roundRect(-w/2, -h/2, w, h, 14);
+      ctx.roundRect(-w / 2, -h / 2, w, h, 14);
       ctx.fill();
       ctx.stroke();
 
-      // Center glowing neon spine trail
+      // Center glowing Dipin spine trail
       ctx.strokeStyle = color;
       ctx.shadowColor = color;
       ctx.shadowBlur = 10;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, -h/2.5);
-      ctx.lineTo(0, h/2.5);
+      ctx.moveTo(0, -h / 2.5);
+      ctx.lineTo(0, h / 2.5);
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // Enclosed neon wheel wells
+      // Enclosed Dipin wheel wells
       ctx.fillStyle = '#000000';
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(-w/4, -h/2 + 6, w/2, 18, 4);
-      ctx.roundRect(-w/4, h/2 - 24, w/2, 18, 4);
+      ctx.roundRect(-w / 4, -h / 2 + 6, w / 2, 18, 4);
+      ctx.roundRect(-w / 4, h / 2 - 24, w / 2, 18, 4);
       ctx.fill();
       ctx.stroke();
 
       // Transparent green glass bubble cabin canopy
       ctx.fillStyle = 'rgba(0, 255, 102, 0.45)';
       ctx.beginPath();
-      ctx.ellipse(0, -h/8, w/3.2, h/9, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -h / 8, w / 3.2, h / 9, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
     // 4. Draw headlights & light beams
-    const hlY = -h/2;
-    const hlXLeft = -w/2 + 8;
-    const hlXRight = w/2 - 8;
+    const hlY = -h / 2;
+    const hlXLeft = -w / 2 + 8;
+    const hlXRight = w / 2 - 8;
 
     if (this.options.timeOfDay === 'night' || this.options.weatherMode === 'rain') {
       this.drawHeadlightBeam(hlXLeft, hlY, color);
@@ -1020,9 +1020,9 @@ export class GameLoop {
     ctx.shadowBlur = 0;
 
     // 5. Draw exhaust pipes and dynamic sparks/particles
-    const exhY = h/2;
-    const exhXLeft = -w/2 + 9;
-    const exhXRight = w/2 - 9;
+    const exhY = h / 2;
+    const exhXLeft = -w / 2 + 9;
+    const exhXRight = w / 2 - 9;
     ctx.fillStyle = '#555';
     ctx.fillRect(exhXLeft - 1.5, exhY - 3, 3, 4);
     ctx.fillRect(exhXRight - 1.5, exhY - 3, 3, 4);
@@ -1052,7 +1052,7 @@ export class GameLoop {
     }
 
     // Taillights/Brakelights
-    const tlY = h/2 - 1.5;
+    const tlY = h / 2 - 1.5;
     const tlWidth = 6;
     const tlHeight = 2.5;
 
@@ -1060,14 +1060,14 @@ export class GameLoop {
       ctx.fillStyle = '#ff1e1e';
       ctx.shadowColor = '#ff0000';
       ctx.shadowBlur = 18;
-      ctx.fillRect(-w/2 + 5, tlY - 1, tlWidth, tlHeight);
-      ctx.fillRect(w/2 - 5 - tlWidth, tlY - 1, tlWidth, tlHeight);
+      ctx.fillRect(-w / 2 + 5, tlY - 1, tlWidth, tlHeight);
+      ctx.fillRect(w / 2 - 5 - tlWidth, tlY - 1, tlWidth, tlHeight);
     } else {
       ctx.fillStyle = '#bb0000';
       ctx.shadowColor = '#bb0000';
       ctx.shadowBlur = 6;
-      ctx.fillRect(-w/2 + 5, tlY, tlWidth, tlHeight);
-      ctx.fillRect(w/2 - 5 - tlWidth, tlY, tlWidth, tlHeight);
+      ctx.fillRect(-w / 2 + 5, tlY, tlWidth, tlHeight);
+      ctx.fillRect(w / 2 - 5 - tlWidth, tlY, tlWidth, tlHeight);
     }
     ctx.shadowBlur = 0;
 
@@ -1158,7 +1158,7 @@ export class GameLoop {
       }
       ctx.globalAlpha = 1;
 
-      // Pulsing neon laser band (1 per building)
+      // Pulsing Dipin laser band (1 per building)
       const bandY = b.y + b.height * 0.3 + Math.sin(Date.now() / 800 + b.x) * b.height * 0.15;
       ctx.save();
       ctx.shadowColor = b.lightColor;
@@ -1197,12 +1197,12 @@ export class GameLoop {
         ctx.fillStyle = '#010105';
         ctx.strokeStyle = b.lightColor;
         ctx.lineWidth = 1.5;
-        
+
         const sy = b.y + b.height / 2 - 12;
         const sh = 20;
         const sw = b.width + 14;
         const sx = b.isLeft ? b.x - 4 : b.x - 10;
-        
+
         ctx.beginPath();
         ctx.rect(sx, sy, sw, sh);
         ctx.fill();
@@ -1240,7 +1240,7 @@ export class GameLoop {
       const h = car.height;
 
       ctx.save();
-      
+
       // Compute steer/tilt of the traffic car if lane changing
       let steerAngle = 0;
       if (car.isLaneChanger && car.targetLane !== undefined) {
@@ -1254,26 +1254,26 @@ export class GameLoop {
       // Draw wheels
       const wheelW = 5.5;
       const wheelH = 13;
-      
+
       // Front wheels
       ctx.save();
-      ctx.translate(-w/2 + 2, -h/2 + 15);
+      ctx.translate(-w / 2 + 2, -h / 2 + 15);
       ctx.rotate(steerAngle);
       ctx.fillStyle = '#1c1c20';
-      ctx.fillRect(-wheelW/2, -wheelH/2, wheelW, wheelH);
+      ctx.fillRect(-wheelW / 2, -wheelH / 2, wheelW, wheelH);
       ctx.restore();
 
       ctx.save();
-      ctx.translate(w/2 - 2, -h/2 + 15);
+      ctx.translate(w / 2 - 2, -h / 2 + 15);
       ctx.rotate(steerAngle);
       ctx.fillStyle = '#1c1c20';
-      ctx.fillRect(-wheelW/2, -wheelH/2, wheelW, wheelH);
+      ctx.fillRect(-wheelW / 2, -wheelH / 2, wheelW, wheelH);
       ctx.restore();
 
       // Rear wheels
       ctx.fillStyle = '#1c1c20';
-      ctx.fillRect(-w/2 + 2 - wheelW/2, h/2 - 15 - wheelH/2, wheelW, wheelH);
-      ctx.fillRect(w/2 - 2 - wheelW/2, h/2 - 15 - wheelH/2, wheelW, wheelH);
+      ctx.fillRect(-w / 2 + 2 - wheelW / 2, h / 2 - 15 - wheelH / 2, wheelW, wheelH);
+      ctx.fillRect(w / 2 - 2 - wheelW / 2, h / 2 - 15 - wheelH / 2, wheelW, wheelH);
 
       // Chassis body shadow
       ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
@@ -1284,20 +1284,20 @@ export class GameLoop {
       ctx.strokeStyle = car.color;
       ctx.lineWidth = 1.8;
       ctx.beginPath();
-      ctx.roundRect(-w/2, -h/2, w, h, 6);
+      ctx.roundRect(-w / 2, -h / 2, w, h, 6);
       ctx.fill();
       ctx.stroke();
       ctx.shadowBlur = 0;
 
       // Panel details (grille / hood lines)
       ctx.fillStyle = '#1c1c25';
-      ctx.fillRect(-w/3.5, -h/2 + 4, w/1.75, 6); // grille
+      ctx.fillRect(-w / 3.5, -h / 2 + 4, w / 1.75, 6); // grille
 
       // Windshield (rear window is at bottom, front windshield at top)
       ctx.fillStyle = 'rgba(100, 150, 220, 0.4)';
-      ctx.fillRect(-w/3.2, -h/4, w/1.6, h/8); // front windshield
+      ctx.fillRect(-w / 3.2, -h / 4, w / 1.6, h / 8); // front windshield
       ctx.fillStyle = 'rgba(100, 150, 220, 0.3)';
-      ctx.fillRect(-w/3.2, h/4, w/1.6, h/10); // rear window
+      ctx.fillRect(-w / 3.2, h / 4, w / 1.6, h / 10); // rear window
 
       // Sirens if police
       if (car.isPolice) {
@@ -1324,21 +1324,21 @@ export class GameLoop {
         grad.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
         grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.15)');
         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        
+
         ctx.fillStyle = grad;
         ctx.beginPath();
         // Left headlight beam
         ctx.moveTo(hlXLeft, hlY);
-        ctx.lineTo(hlXLeft - beamWidth/2, hlY - beamLength);
-        ctx.lineTo(hlXLeft + beamWidth/2, hlY - beamLength);
+        ctx.lineTo(hlXLeft - beamWidth / 2, hlY - beamLength);
+        ctx.lineTo(hlXLeft + beamWidth / 2, hlY - beamLength);
         ctx.closePath();
         ctx.fill();
 
         // Right headlight beam
         ctx.beginPath();
         ctx.moveTo(hlXRight, hlY);
-        ctx.lineTo(hlXRight - beamWidth/2, hlY - beamLength);
-        ctx.lineTo(hlXRight + beamWidth/2, hlY - beamLength);
+        ctx.lineTo(hlXRight - beamWidth / 2, hlY - beamLength);
+        ctx.lineTo(hlXRight + beamWidth / 2, hlY - beamLength);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
@@ -1359,7 +1359,7 @@ export class GameLoop {
       // Detect if player is rapidly approaching this car in the same lane
       const latDist = Math.abs(car.x - this.playerX);
       const isPlayerApproaching = latDist < 45 && this.playerY > car.y + h && this.playerY - (car.y + h) < 140;
-      
+
       if (isPlayerApproaching) {
         // Bright glowing brake lights!
         ctx.fillStyle = '#ff1e1e';
@@ -1382,7 +1382,7 @@ export class GameLoop {
     this.ctx.save();
     this.ctx.font = 'bold 10px Orbitron';
     this.ctx.textAlign = 'center';
-    
+
     this.floatingTexts.forEach(t => {
       this.ctx.fillStyle = t.color;
       this.ctx.globalAlpha = t.alpha;
@@ -1493,9 +1493,9 @@ export class GameLoop {
         b.y = -b.height - 40;
         b.height = 50 + Math.random() * 80;
         b.color = `hsl(${260 + Math.random() * 60}, 50%, ${10 + Math.random() * 12}%)`;
-        b.lightColor = Math.random() > 0.5 ? 'var(--neon-cyan)' : 'var(--neon-pink)';
-        
-        const billboards = ['NEON', 'GRID', 'RUN', 'SYS', 'XP', 'DATA'];
+        b.lightColor = Math.random() > 0.5 ? 'var(--Dipin-cyan)' : 'var(--Dipin-pink)';
+
+        const billboards = ['Dipin', 'GRID', 'RUN', 'SYS', 'XP', 'DATA'];
         b.signText = Math.random() > 0.6 ? billboards[Math.floor(Math.random() * billboards.length)] : null;
       }
     });
@@ -1609,7 +1609,7 @@ export class GameLoop {
           car.changeTimer = 2 + Math.random() * 3;
           const offset = Math.random() > 0.5 ? 1 : -1;
           const nextLane = Math.max(0, Math.min(this.lanesCount - 1, car.lane + offset));
-          
+
           const laneBlocked = this.traffic.some(tc => tc !== car && tc.lane === nextLane && Math.abs(tc.y - car.y) < 100);
           if (!laneBlocked) {
             car.lane = nextLane;
@@ -1691,10 +1691,10 @@ export class GameLoop {
     if (this.carConfig.id === 'cobra' && this.isBoosting) {
       this.spawnCrashExplosion(trafficCar.x + trafficCar.width / 2, trafficCar.y + trafficCar.height / 2, 'rgba(233, 30, 99, 0.95)', 20);
       this.traffic.splice(index, 1);
-      
+
       this.score += 200;
       this.options.onScoreUpdate(this.score);
-      audio.playCrash(); 
+      audio.playCrash();
 
       this.floatingTexts.push({
         x: trafficCar.x + trafficCar.width / 2,
@@ -1705,7 +1705,7 @@ export class GameLoop {
         age: 0
       });
 
-      this.options.onHit(); 
+      this.options.onHit();
       return;
     }
 
@@ -1715,10 +1715,10 @@ export class GameLoop {
       this.options.onFuelUpdate(this.fuel);
       this.spawnCrashExplosion(trafficCar.x + trafficCar.width / 2, trafficCar.y + trafficCar.height / 2, 'rgba(161, 161, 170, 0.95)', 15);
       this.traffic.splice(index, 1);
-      
+
       audio.playCrash();
       this.options.onHit();
-      this.invulnerableTime = 1.5; 
+      this.invulnerableTime = 1.5;
 
       this.floatingTexts.push({
         x: this.playerX + this.playerWidth / 2,
@@ -1735,25 +1735,25 @@ export class GameLoop {
       this.shieldActive = false;
       this.shieldTimer = 0;
       this.options.onShieldUpdate(false);
-      
+
       this.spawnCrashExplosion(trafficCar.x + trafficCar.width / 2, trafficCar.y + trafficCar.height / 2, 'rgba(0, 240, 255, 0.95)', 15);
       this.traffic.splice(index, 1);
-      
+
       audio.playCrash();
       this.options.onHit();
-      this.invulnerableTime = 1.0; 
+      this.invulnerableTime = 1.0;
     } else {
       this.lives = Math.max(0, this.lives - 1);
       this.options.onLivesUpdate(this.lives);
       this.options.onHit();
-      
+
       this.spawnCrashExplosion(this.playerX + this.playerWidth / 2, this.playerY + 20, 'rgba(255, 0, 127, 0.95)', 25);
-      
+
       if (this.lives <= 0) {
         this.triggerGameOver();
       } else {
         audio.playCrash();
-        this.invulnerableTime = 2.0; 
+        this.invulnerableTime = 2.0;
         this.traffic.splice(index, 1);
       }
     }
@@ -1764,8 +1764,8 @@ export class GameLoop {
       audio.playCoin();
       this.coins += 1;
       this.options.onCoinsUpdate(this.coins);
-      this.score += 50; 
-      
+      this.score += 50;
+
       this.spawnCollectBurst(item.x, item.y, 'rgba(255, 215, 0, 0.95)');
       this.floatingTexts.push({
         x: item.x,
@@ -1779,7 +1779,7 @@ export class GameLoop {
       audio.playShield();
       this.fuel = Math.min(100, this.fuel + 30);
       this.options.onFuelUpdate(this.fuel);
-      
+
       this.spawnCollectBurst(item.x, item.y, 'rgba(57, 255, 20, 0.95)');
       this.floatingTexts.push({
         x: item.x,
@@ -1794,7 +1794,7 @@ export class GameLoop {
       this.shieldActive = true;
       this.shieldTimer = 8;
       this.options.onShieldUpdate(true);
-      
+
       this.spawnCollectBurst(item.x, item.y, 'rgba(0, 240, 255, 0.95)');
       this.floatingTexts.push({
         x: item.x,
@@ -1810,7 +1810,7 @@ export class GameLoop {
       const durationMultiplier = this.carConfig.id === 'roadster' ? 1.3 : 1.0;
       this.magnetTimer = 10 * durationMultiplier;
       this.options.onMagnetUpdate(true);
-      
+
       this.spawnCollectBurst(item.x, item.y, 'rgba(157, 78, 221, 0.95)');
       this.floatingTexts.push({
         x: item.x,
@@ -1956,7 +1956,7 @@ export class GameLoop {
   spawnNearMissSparkles() {
     const px = this.playerX + this.playerWidth / 2;
     const py = this.playerY;
-    
+
     for (let i = 0; i < 8; i++) {
       this.particles.push({
         x: px + (Math.random() - 0.5) * 40,
@@ -2052,7 +2052,7 @@ export class GameLoop {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Hanging neon lights
+      // Hanging Dipin lights
       const lightCount = 5;
       for (let li = 0; li <= lightCount; li++) {
         const lx = this.roadLeft + (this.roadWidth / lightCount) * li;

@@ -71,12 +71,12 @@ function GameEngine({
       onMagnetUpdate,
       onHit
     });
-    
+
     gameLoopRef.current = gameLoop;
 
     // Start ticker loop
     let lastTime = performance.now();
-    
+
     const tick = (time) => {
       const deltaTime = (time - lastTime) / 1000; // convert to seconds
       lastTime = time;
@@ -102,7 +102,7 @@ function GameEngine({
       cancelAnimationFrame(requestRef.current);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      
+
       // Stop dynamic synth sounds
       audio.stopEngine();
     };
@@ -110,7 +110,7 @@ function GameEngine({
 
   const togglePause = () => {
     if (!gameLoopRef.current) return;
-    
+
     const newPauseState = !gameLoopRef.current.isPaused;
     gameLoopRef.current.isPaused = newPauseState;
     setIsPaused(newPauseState);
@@ -138,7 +138,7 @@ function GameEngine({
         {isPaused && (
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-6 pointer-events-auto">
             <div className="text-center font-display">
-              <h2 className="text-3xl font-extrabold text-neon-cyan neon-pulse-cyan tracking-wider">
+              <h2 className="text-3xl font-extrabold text-Dipin-cyan Dipin-pulse-cyan tracking-wider">
                 SYSTEM PAUSED
               </h2>
               <p className="text-xs text-text-secondary mt-1">
@@ -149,7 +149,7 @@ function GameEngine({
             <div className="flex flex-col gap-3 w-48 font-display">
               <button
                 onClick={togglePause}
-                className="neon-btn neon-btn-cyan w-full flex items-center justify-center gap-2"
+                className="Dipin-btn Dipin-btn-cyan w-full flex items-center justify-center gap-2"
               >
                 <Play size={14} fill="currentColor" /> RESUME RIDE
               </button>

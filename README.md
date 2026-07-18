@@ -1,6 +1,6 @@
-# 🚗 Neon Highway Racer — Retro Cyberpunk Arcade
+# 🚗 Dipin Highway Racer — Retro Cyberpunk Arcade
 
-A browser-based cyberpunk top-down racing arcade game built with React + Vite. Race at high speed through a neon-lit cyber grid, dodge traffic, collect coins, unlock cars, and survive the grid.
+A browser-based cyberpunk top-down racing arcade game built with React + Vite. Race at high speed through a Dipin-lit cyber grid, dodge traffic, collect coins, unlock cars, and survive the grid.
 
 ---
 
@@ -23,7 +23,7 @@ A browser-based cyberpunk top-down racing arcade game built with React + Vite. R
 | Car | Top Speed | Handling | Perk |
 |---|---|---|---|
 | **Cyber Roadster** | 65 | 75 | E-Magnet Plus — Magnet lasts 30% longer |
-| **Neon Cruiser** | 55 | 60 | Shield Capacitor — Starts with an active shield |
+| **Dipin Cruiser** | 55 | 60 | Shield Capacitor — Starts with an active shield |
 | **Apex GT** | 80 | 88 | Tuning Drift — +15% handling during Nitro |
 | **Future Interceptor** | 80 | 70 | Data Double — All coins worth ×2 |
 | **Carbon Cobra** | 88 | 62 | Ram Charger — Crush traffic during Nitro for +200 pts |
@@ -40,12 +40,12 @@ A browser-based cyberpunk top-down racing arcade game built with React + Vite. R
 - **Procedural car rendering** — every vehicle is drawn with unique chassis shapes, windshields, cockpits, spoilers, and underglow
 - **Nitro Rocket Fire** — animated flickering exhaust flames when boosting
 - **Nitro Warp Zoom** — subtle canvas zoom + edge speed lines during boost
-- **Neon Gantry Arches** — 3D-perspective arches scroll over the road with hanging lights and signs
+- **Dipin Gantry Arches** — 3D-perspective arches scroll over the road with hanging lights and signs
 - **Magnet Laser Arcs** — purple dashed energy beams connect your car to attracted coins
 - **Friction Sparks** — orange/yellow sparks spray from rear tyres during hard braking or drifting
 - **Tyre Skid Marks** — dynamic rubber marks fade out on the asphalt
 - **Rain Ripples** — concentric water splash rings on the road surface in storm mode
-- **Wireframe Skyscrapers** — structural X-cross towers with pulsing scan bands, blinking antennas, and neon billboards
+- **Wireframe Skyscrapers** — structural X-cross towers with pulsing scan bands, blinking antennas, and Dipin billboards
 - **Traffic AI** — cars have headlights, brake lights, windshields, spoilers, and lane-changing behaviour
 - **Dynamic lighting** — headlight beams, underglow, proximity brake lights for traffic
 

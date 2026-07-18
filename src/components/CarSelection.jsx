@@ -27,11 +27,10 @@ function CarSelection({
         {Array.from({ length: maxUpgrades }).map((_, i) => (
           <div
             key={i}
-            className={`w-6 h-2 border rounded-sm transition-all duration-300 ${
-              i < level
-                ? 'bg-neon-green border-neon-green shadow-[0_0_8px_var(--neon-green)]'
+            className={`w-6 h-2 border rounded-sm transition-all duration-300 ${i < level
+                ? 'bg-Dipin-green border-Dipin-green shadow-[0_0_8px_var(--Dipin-green)]'
                 : 'bg-slate-950 border-glass-border'
-            }`}
+              }`}
           />
         ))}
       </div>
@@ -39,12 +38,12 @@ function CarSelection({
   };
 
   return (
-    <div className="glass-panel neon-glow-purple p-6 max-w-4xl w-full cyber-corners flex flex-col gap-6">
+    <div className="glass-panel Dipin-glow-purple p-6 max-w-4xl w-full cyber-corners flex flex-col gap-6">
       {/* Top Header Bar */}
       <div className="flex justify-between items-center w-full border-b border-glass-border pb-4">
         <button
           onClick={onBack}
-          className="flex items-center gap-1 text-xs font-display text-text-secondary hover:text-neon-cyan transition-all cursor-pointer"
+          className="flex items-center gap-1 text-xs font-display text-text-secondary hover:text-Dipin-cyan transition-all cursor-pointer"
         >
           <ArrowLeft size={16} /> MAIN SYSTEM
         </button>
@@ -52,8 +51,8 @@ function CarSelection({
           GARAGE STATION WORKSHOP
         </h2>
         <div className="flex items-center gap-2 px-3 py-1 bg-slate-950-60 border border-glass-border rounded-lg">
-          <Coins className="text-neon-yellow" size={16} />
-          <span className="font-display text-sm font-bold text-neon-yellow">{totalCoins}</span>
+          <Coins className="text-Dipin-yellow" size={16} />
+          <span className="font-display text-sm font-bold text-Dipin-yellow">{totalCoins}</span>
         </div>
       </div>
 
@@ -68,18 +67,17 @@ function CarSelection({
             {cars.map((car) => {
               const isUnlocked = unlockedCars.includes(car.id);
               const isSelected = selectedCar.id === car.id;
-              
+
               return (
                 <button
                   key={car.id}
                   onClick={() => isUnlocked && setSelectedCar(car)}
-                  className={`w-full text-left p-3 rounded-lg border transition-all relative overflow-hidden flex items-center justify-between cursor-pointer ${
-                    isSelected
+                  className={`w-full text-left p-3 rounded-lg border transition-all relative overflow-hidden flex items-center justify-between cursor-pointer ${isSelected
                       ? 'bg-slate-900/60 border-2'
                       : isUnlocked
-                      ? 'bg-slate-950-60 border-glass-border hover:border-slate-600'
-                      : 'bg-slate-950/20 border-glass-border opacity-60 hover:opacity-80'
-                  }`}
+                        ? 'bg-slate-950-60 border-glass-border hover:border-slate-600'
+                        : 'bg-slate-950/20 border-glass-border opacity-60 hover:opacity-80'
+                    }`}
                   style={{
                     borderColor: isSelected ? car.color : 'var(--glass-border)',
                     boxShadow: isSelected ? `0 0 12px ${car.color}66` : 'none'
@@ -89,7 +87,7 @@ function CarSelection({
                     <span className="font-display text-sm font-bold text-white flex items-center gap-2">
                       {car.name}
                       {!isUnlocked && (
-                        <span className="text-[10px] text-neon-yellow font-normal bg-neon-yellow-dim px-2 py-0.5 rounded flex items-center gap-1 font-sans border border-neon-yellow/30">
+                        <span className="text-[10px] text-Dipin-yellow font-normal bg-Dipin-yellow-dim px-2 py-0.5 rounded flex items-center gap-1 font-sans border border-Dipin-yellow/30">
                           <Coins size={10} /> {car.price}
                         </span>
                       )}
@@ -116,11 +114,10 @@ function CarSelection({
                         onBuy(car);
                       }}
                       disabled={totalCoins < car.price}
-                      className={`text-[9px] font-display px-2 py-1 border rounded transition-all cursor-pointer ${
-                        totalCoins >= car.price
-                          ? 'border-neon-yellow text-neon-yellow bg-neon-yellow-dim hover:bg-neon-yellow hover:text-black font-semibold'
+                      className={`text-[9px] font-display px-2 py-1 border rounded transition-all cursor-pointer ${totalCoins >= car.price
+                          ? 'border-Dipin-yellow text-Dipin-yellow bg-Dipin-yellow-dim hover:bg-Dipin-yellow hover:text-black font-semibold'
                           : 'border-glass-border text-text-muted cursor-not-allowed'
-                      }`}
+                        }`}
                     >
                       ACQUIRE
                     </button>
@@ -149,7 +146,7 @@ function CarSelection({
 
             {/* Unique Perk Card */}
             <div className="border border-dashed border-glass-border p-3 rounded-lg flex flex-col gap-1 bg-slate-900/40 mt-1">
-              <div className="flex items-center gap-1.5 text-xs font-display font-semibold text-neon-green">
+              <div className="flex items-center gap-1.5 text-xs font-display font-semibold text-Dipin-green">
                 <Zap size={14} className="animate-pulse" /> UNIQUE MODULE: {selectedCar.perkName}
               </div>
               <div className="text-[10px] text-text-secondary font-sans leading-relaxed">
@@ -161,7 +158,7 @@ function CarSelection({
           {/* Upgrades Workshop Panel */}
           {unlockedCars.includes(selectedCar.id) ? (
             <div className="border border-glass-border p-4 rounded-lg bg-slate-950/80 flex flex-col gap-4">
-              <h4 className="text-center font-display text-xs font-bold text-neon-cyan tracking-wider">
+              <h4 className="text-center font-display text-xs font-bold text-Dipin-cyan tracking-wider">
                 CORE CALIBRATION WORKSHOP
               </h4>
 
@@ -177,16 +174,15 @@ function CarSelection({
                     <button
                       onClick={() => onUpgrade(selectedCar.id, 'speed')}
                       disabled={totalCoins < getUpgradeCost(currentUpgrades.speed)}
-                      className={`text-[10px] font-display px-3 py-1 border rounded transition-all cursor-pointer ${
-                        totalCoins >= getUpgradeCost(currentUpgrades.speed)
-                          ? 'border-neon-cyan text-neon-cyan bg-neon-cyan-dim hover:bg-neon-cyan hover:text-black font-semibold'
+                      className={`text-[10px] font-display px-3 py-1 border rounded transition-all cursor-pointer ${totalCoins >= getUpgradeCost(currentUpgrades.speed)
+                          ? 'border-Dipin-cyan text-Dipin-cyan bg-Dipin-cyan-dim hover:bg-Dipin-cyan hover:text-black font-semibold'
                           : 'border-glass-border text-text-muted cursor-not-allowed'
-                      }`}
+                        }`}
                     >
                       +{getUpgradeCost(currentUpgrades.speed)}c
                     </button>
                   ) : (
-                    <span className="text-[9px] font-display text-neon-yellow border border-neon-yellow/30 bg-neon-yellow-dim px-2 py-0.5 rounded">
+                    <span className="text-[9px] font-display text-Dipin-yellow border border-Dipin-yellow/30 bg-Dipin-yellow-dim px-2 py-0.5 rounded">
                       MAX LEVEL
                     </span>
                   )}
@@ -205,16 +201,15 @@ function CarSelection({
                     <button
                       onClick={() => onUpgrade(selectedCar.id, 'handling')}
                       disabled={totalCoins < getUpgradeCost(currentUpgrades.handling)}
-                      className={`text-[10px] font-display px-3 py-1 border rounded transition-all cursor-pointer ${
-                        totalCoins >= getUpgradeCost(currentUpgrades.handling)
-                          ? 'border-neon-pink text-neon-pink bg-neon-pink-dim hover:bg-neon-pink hover:text-black font-semibold'
+                      className={`text-[10px] font-display px-3 py-1 border rounded transition-all cursor-pointer ${totalCoins >= getUpgradeCost(currentUpgrades.handling)
+                          ? 'border-Dipin-pink text-Dipin-pink bg-Dipin-pink-dim hover:bg-Dipin-pink hover:text-black font-semibold'
                           : 'border-glass-border text-text-muted cursor-not-allowed'
-                      }`}
+                        }`}
                     >
                       +{getUpgradeCost(currentUpgrades.handling)}c
                     </button>
                   ) : (
-                    <span className="text-[9px] font-display text-neon-yellow border border-neon-yellow/30 bg-neon-yellow-dim px-2 py-0.5 rounded">
+                    <span className="text-[9px] font-display text-Dipin-yellow border border-Dipin-yellow/30 bg-Dipin-yellow-dim px-2 py-0.5 rounded">
                       MAX LEVEL
                     </span>
                   )}
@@ -223,7 +218,7 @@ function CarSelection({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-6 bg-slate-950/60 border border-dashed border-glass-border rounded-lg text-center gap-2">
-              <ShieldAlert className="text-neon-pink animate-pulse" size={24} />
+              <ShieldAlert className="text-Dipin-pink animate-pulse" size={24} />
               <div className="font-display text-xs text-white">UPGRADES LOCKED</div>
               <p className="text-[10px] text-text-secondary leading-relaxed">
                 You must purchase and unlock this vehicle's schematic blueprints to calibrate its core.
@@ -236,7 +231,7 @@ function CarSelection({
             {unlockedCars.includes(selectedCar.id) ? (
               <button
                 onClick={onStart}
-                className="neon-btn w-full flex items-center justify-center gap-2 cursor-pointer"
+                className="Dipin-btn w-full flex items-center justify-center gap-2 cursor-pointer"
                 style={{
                   borderColor: selectedCar.color,
                   color: selectedCar.color,
@@ -258,11 +253,10 @@ function CarSelection({
             ) : (
               <button
                 onClick={() => onBuy(selectedCar)}
-                className={`w-full neon-btn flex items-center justify-center gap-2 cursor-pointer ${
-                  totalCoins >= selectedCar.price
-                    ? 'neon-btn-purple'
+                className={`w-full Dipin-btn flex items-center justify-center gap-2 cursor-pointer ${totalCoins >= selectedCar.price
+                    ? 'Dipin-btn-purple'
                     : 'border-glass-border text-text-muted cursor-not-allowed'
-                }`}
+                  }`}
                 disabled={totalCoins < selectedCar.price}
               >
                 <Coins size={16} /> ACQUIRE SCHEMATIC ({selectedCar.price} COINS)

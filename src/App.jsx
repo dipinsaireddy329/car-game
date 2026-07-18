@@ -17,19 +17,19 @@ export const CARS = [
     handling: 75,
     perkName: 'E-Magnet Plus',
     perkDesc: 'Coin attraction magnet lasts 30% longer.',
-    color: '#00f0ff', // neon cyan
+    color: '#00f0ff', // Dipin cyan
     price: 0,
     trail: 'rgba(0, 240, 255, 0.4)'
   },
   {
     id: 'cruiser',
-    name: 'Neon Cruiser',
+    name: 'Dipin Cruiser',
     description: 'Armored heavy-duty patrol racer. Higher endurance and shields.',
     speed: 55,
     handling: 60,
     perkName: 'Shield Capacitor',
     perkDesc: 'Starts game with a shielding field active.',
-    color: '#9d4edd', // neon purple
+    color: '#9d4edd', // Dipin purple
     price: 0,
     trail: 'rgba(157, 78, 221, 0.4)'
   },
@@ -41,7 +41,7 @@ export const CARS = [
     handling: 88,
     perkName: 'Tuning Drift',
     perkDesc: 'Vehicle lateral handling increases by 15% during active Nitro boosts.',
-    color: '#ff5722', // neon orange
+    color: '#ff5722', // Dipin orange
     price: 0,
     trail: 'rgba(255, 87, 34, 0.4)'
   },
@@ -53,7 +53,7 @@ export const CARS = [
     handling: 70,
     perkName: 'Data Double',
     perkDesc: 'All network coins collected are worth double value.',
-    color: '#ffd700', // neon yellow
+    color: '#ffd700', // Dipin yellow
     price: 0,
     trail: 'rgba(255, 215, 0, 0.4)'
   },
@@ -77,7 +77,7 @@ export const CARS = [
     handling: 85,
     perkName: 'Nitro Burst',
     perkDesc: 'Nitro refills and charges 50% faster.',
-    color: '#ff007f', // neon pink
+    color: '#ff007f', // Dipin pink
     price: 0,
     trail: 'rgba(255, 0, 127, 0.4)'
   },
@@ -89,7 +89,7 @@ export const CARS = [
     handling: 50,
     perkName: 'Heavy Armor',
     perkDesc: 'Starts with 4 lives. Energy cell decays 25% slower.',
-    color: '#39ff14', // neon green
+    color: '#39ff14', // Dipin green
     price: 0,
     trail: 'rgba(57, 255, 20, 0.4)'
   },
@@ -120,12 +120,12 @@ export const CARS = [
   {
     id: 'lightcycle',
     name: 'Vector Lightcycle',
-    description: 'Ultra-narrow grid-skimming neon motorcycle. Exceptional agility and profile.',
+    description: 'Ultra-narrow grid-skimming Dipin motorcycle. Exceptional agility and profile.',
     speed: 92,
     handling: 98,
     perkName: 'Slipstream Profile',
     perkDesc: 'Extremely narrow 26px vehicle hitbox allowing effortless lane splitting.',
-    color: '#00ff66', // neon lime
+    color: '#00ff66', // Dipin lime
     price: 0,
     trail: 'rgba(0, 255, 102, 0.4)'
   }
@@ -149,7 +149,7 @@ function App() {
     cybertruck: { speed: 1, handling: 1 },
     lightcycle: { speed: 1, handling: 1 }
   });
-  
+
   // Game metrics (sent from Canvas Game Loop)
   const [score, setScore] = useState(0);
   const [sessionCoins, setSessionCoins] = useState(0);
@@ -159,7 +159,7 @@ function App() {
   const [fuel, setFuel] = useState(100);
   const [activeShield, setActiveShield] = useState(false);
   const [activeMagnet, setActiveMagnet] = useState(false);
-  
+
   // Settings
   const [weatherMode, setWeatherMode] = useState('clear'); // clear, rain
   const [timeOfDay, setTimeOfDay] = useState('night'); // day, night
@@ -168,11 +168,11 @@ function App() {
 
   // Load progress from localStorage
   useEffect(() => {
-    const savedHighScore = localStorage.getItem('neon_racer_high_score');
-    const savedCoins = localStorage.getItem('neon_racer_total_coins');
-    const savedUnlocked = localStorage.getItem('neon_racer_unlocked_cars');
-    const savedUpgrades = localStorage.getItem('neon_racer_upgrades');
-    const savedMuted = localStorage.getItem('neon_racer_muted');
+    const savedHighScore = localStorage.getItem('Dipin_racer_high_score');
+    const savedCoins = localStorage.getItem('Dipin_racer_total_coins');
+    const savedUnlocked = localStorage.getItem('Dipin_racer_unlocked_cars');
+    const savedUpgrades = localStorage.getItem('Dipin_racer_upgrades');
+    const savedMuted = localStorage.getItem('Dipin_racer_muted');
 
     if (savedHighScore) setHighScore(parseInt(savedHighScore, 10));
     if (savedCoins) setCoins(parseInt(savedCoins, 10));
@@ -224,7 +224,7 @@ function App() {
   const handleToggleMute = () => {
     const isMuted = audio.toggleMute();
     setMuted(isMuted);
-    localStorage.setItem('neon_racer_muted', isMuted ? 'true' : 'false');
+    localStorage.setItem('Dipin_racer_muted', isMuted ? 'true' : 'false');
     audio.playClick();
   };
 
@@ -232,14 +232,14 @@ function App() {
     audio.playClick();
     setScore(0);
     setSessionCoins(0);
-    
+
     // Sentinel & Cybertruck start with 4 lives, others have 3
     const startLives = (selectedCar.id === 'sentinel' || selectedCar.id === 'cybertruck') ? 4 : 3;
     setLives(startLives);
-    
+
     setFuel(100);
     setNitro(0);
-    setActiveShield(selectedCar.id === 'cruiser'); 
+    setActiveShield(selectedCar.id === 'cruiser');
     setActiveMagnet(false);
     setGameState('PLAYING');
   };
@@ -248,12 +248,12 @@ function App() {
     if (coins >= car.price && !unlockedCars.includes(car.id)) {
       const newCoins = coins - car.price;
       const newUnlocked = [...unlockedCars, car.id];
-      
+
       setCoins(newCoins);
       setUnlockedCars(newUnlocked);
-      
-      localStorage.setItem('neon_racer_total_coins', newCoins.toString());
-      localStorage.setItem('neon_racer_unlocked_cars', JSON.stringify(newUnlocked));
+
+      localStorage.setItem('Dipin_racer_total_coins', newCoins.toString());
+      localStorage.setItem('Dipin_racer_unlocked_cars', JSON.stringify(newUnlocked));
       audio.playShield();
       return true;
     }
@@ -280,8 +280,8 @@ function App() {
       setCoins(newCoins);
       setUpgrades(newUpgrades);
 
-      localStorage.setItem('neon_racer_total_coins', newCoins.toString());
-      localStorage.setItem('neon_racer_upgrades', JSON.stringify(newUpgrades));
+      localStorage.setItem('Dipin_racer_total_coins', newCoins.toString());
+      localStorage.setItem('Dipin_racer_upgrades', JSON.stringify(newUpgrades));
       audio.playShield();
     } else {
       audio.playClick();
@@ -290,17 +290,17 @@ function App() {
 
   const handleGameOver = (finalScore, finalCoins) => {
     audio.playCrash();
-    
+
     // Interceptor double coin perk
     const processedCoins = selectedCar.id === 'police' ? finalCoins * 2 : finalCoins;
-    
+
     const newCoinsBank = coins + processedCoins;
     setCoins(newCoinsBank);
-    localStorage.setItem('neon_racer_total_coins', newCoinsBank.toString());
+    localStorage.setItem('Dipin_racer_total_coins', newCoinsBank.toString());
 
     if (finalScore > highScore) {
       setHighScore(finalScore);
-      localStorage.setItem('neon_racer_high_score', finalScore.toString());
+      localStorage.setItem('Dipin_racer_high_score', finalScore.toString());
     }
 
     setSessionCoins(processedCoins);
@@ -321,7 +321,7 @@ function App() {
       <div className="vignette" />
 
       {/* Mute Button */}
-      <button 
+      <button
         className="audio-toggle-btn"
         onClick={handleToggleMute}
         title={muted ? "Unmute Sound" : "Mute Sound"}
@@ -437,11 +437,11 @@ function App() {
             transition={{ duration: 0.4 }}
             className="absolute inset-0 flex items-center justify-center p-4"
           >
-            <div className="glass-panel neon-glow-pink p-8 max-w-md w-full text-center cyber-corners flex flex-col items-center gap-6">
-              <h1 className="font-display text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-red-500 neon-pulse-pink">
+            <div className="glass-panel Dipin-glow-pink p-8 max-w-md w-full text-center cyber-corners flex flex-col items-center gap-6">
+              <h1 className="font-display text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-red-500 Dipin-pulse-pink">
                 GRID COLLISION
               </h1>
-              
+
               <div className="w-full bg-slate-950/60 p-5 rounded-lg border border-slate-800 flex flex-col gap-3 font-display">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-text-secondary">DISTANCE SCORE</span>
@@ -449,30 +449,30 @@ function App() {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-text-secondary">COINS SECURED</span>
-                  <span className="text-xl font-bold text-neon-yellow">+{sessionCoins}</span>
+                  <span className="text-xl font-bold text-Dipin-yellow">+{sessionCoins}</span>
                 </div>
                 {selectedCar.id === 'police' && (
-                  <div className="text-[10px] text-neon-yellow/80 mt-[-6px] text-right font-sans">
+                  <div className="text-[10px] text-Dipin-yellow/80 mt-[-6px] text-right font-sans">
                     * 2X Interceptor Data Perk Applied
                   </div>
                 )}
                 <hr className="border-slate-800" />
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-text-secondary">PERSONAL BEST</span>
-                  <span className="text-xl font-bold text-neon-cyan">{highScore}</span>
+                  <span className="text-xl font-bold text-Dipin-cyan">{highScore}</span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-3 w-full">
                 <button
-                  className="neon-btn neon-btn-pink w-full"
+                  className="Dipin-btn Dipin-btn-pink w-full"
                   onClick={handleStartGame}
                 >
                   REBOOT ENGINE
                 </button>
-                
+
                 <button
-                  className="neon-btn neon-btn-cyan w-full"
+                  className="Dipin-btn Dipin-btn-cyan w-full"
                   onClick={() => {
                     audio.playClick();
                     setGameState('SELECT_CAR');
