@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameLoop } from './GameLoop';
-import { Pause, Play, LogOut } from 'lucide-react';
+import { Play, RotateCcw } from 'lucide-react';
 import { audio } from '../utils/audio';
+import { touchControls } from './TouchControls';
 
 function GameEngine({
   selectedCar,
   carUpgrades,
-  weatherMode,
-  timeOfDay,
+  theme,
   onGameOver,
   onScoreUpdate,
   onCoinsUpdate,
@@ -17,32 +17,88 @@ function GameEngine({
   onFuelUpdate,
   onShieldUpdate,
   onMagnetUpdate,
-  onHit
+  onLevelUpdate,
+  onComboUpdate,
+  onHit,
+  gyroscopeEnabled
 }) {
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   const gameLoopRef = useRef(null);
   const requestRef = useRef(null);
   const keysRef = useRef({});
   const [isPaused, setIsPaused] = useState(false);
 
+  // Responsive scaling to maintain 450:700 aspect ratio
+  useEffect(() => {
+    const handleResize = () => {
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      if (!canvas || !container) return;
+
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      const aspectRatio = 450 / 700;
+      let newWidth = containerWidth;
+      let newHeight = containerWidth / aspectRatio;
+
+      if (newHeight > containerHeight) {
+        newHeight = containerHeight;
+        newWidth = containerHeight * aspectRatio;
+      }
+
+      canvas.style.width = `${newWidth}px`;
+      canvas.style.height = `${newHeight}px`;
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    handleResize(); // Initial call
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
+
+  // Gyroscope toggle updates
+  useEffect(() => {
+    if (gyroscopeEnabled) {
+      touchControls.toggleGyro().then(active => {
+        if (!active && touchControls.gyroEnabled) {
+          touchControls.toggleGyro(); // Toggle off if permission fails
+        }
+      });
+    } else {
+      if (touchControls.gyroEnabled) {
+        touchControls.toggleGyro();
+      }
+    }
+  }, [gyroscopeEnabled]);
+
+  // Main Loop Game Engine Wiring
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
-    // Set fixed resolution
+    // Set stable coordinate resolution
     canvas.width = 450;
     canvas.height = 700;
 
-    // Key handlers
+    // Attach mobile touch handler
+    touchControls.attach(canvas, container);
+
+    // Keyboard handlers for Desktop controls
     const handleKeyDown = (e) => {
-      // Prevent scrolling behaviors for space and arrow keys
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+      const preventKeys = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '];
+      if (preventKeys.includes(e.key)) {
         e.preventDefault();
       }
-
       keysRef.current[e.key] = true;
 
-      // Handle pause toggling with Escape or 'p'
+      // Escape or P triggers pausing
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
         togglePause();
       }
@@ -58,8 +114,7 @@ function GameEngine({
     // Instantiate game loop
     const gameLoop = new GameLoop(canvas, selectedCar, {
       carUpgrades,
-      weatherMode,
-      timeOfDay,
+      theme,
       onGameOver,
       onScoreUpdate,
       onCoinsUpdate,
@@ -69,26 +124,28 @@ function GameEngine({
       onFuelUpdate,
       onShieldUpdate,
       onMagnetUpdate,
+      onLevelUpdate,
+      onComboUpdate,
       onHit
     });
 
     gameLoopRef.current = gameLoop;
 
-    // Start ticker loop
     let lastTime = performance.now();
 
     const tick = (time) => {
-      const deltaTime = (time - lastTime) / 1000; // convert to seconds
+      const deltaTime = (time - lastTime) / 1000;
       lastTime = time;
 
-      // Restrict max time step to avoid large jumps during frame drops
+      // Capped delta to avoid massive glitches on frame drops
       const cappedDelta = Math.min(0.05, deltaTime);
 
       if (!gameLoop.isPaused && !gameLoop.gameOverTriggered) {
-        gameLoop.update(keysRef.current, cappedDelta);
+        // Merge keyboard controls with touch controls virtual key map
+        const mergedKeys = { ...keysRef.current, ...touchControls.keys };
+        gameLoop.update(mergedKeys, cappedDelta);
         gameLoop.draw();
       } else if (gameLoop.isPaused) {
-        // Draw the static board state when paused
         gameLoop.draw();
       }
 
@@ -97,16 +154,17 @@ function GameEngine({
 
     requestRef.current = requestAnimationFrame(tick);
 
-    // Cleanup
+    // Cleanup listeners & loops
     return () => {
       cancelAnimationFrame(requestRef.current);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-
-      // Stop dynamic synth sounds
+      touchControls.detach();
       audio.stopEngine();
+      audio.stopRain();
+      audio.stopCity();
     };
-  }, [selectedCar, weatherMode, timeOfDay]);
+  }, [selectedCar, theme]);
 
   const togglePause = () => {
     if (!gameLoopRef.current) return;
@@ -119,30 +177,37 @@ function GameEngine({
     if (newPauseState) {
       audio.stopEngine();
       audio.stopMusic();
+      audio.stopRain();
+      audio.stopCity();
     } else {
       audio.startEngine();
       audio.startMusic();
+      if (gameLoopRef.current.theme.hasRain) {
+        audio.startRain();
+      }
+      if (gameLoopRef.current.theme.neonCity || gameLoopRef.current.theme.cityLights) {
+        audio.startCity();
+      }
     }
   };
 
   return (
-    <div className="absolute inset-0 w-full h-full flex items-center justify-center p-4 bg-[#020206]/85 z-10">
-      {/* Game Canvas Container */}
-      <div className="relative shadow-[0_0_40px_rgba(0,0,0,0.9)] border-2 border-glass-border rounded-xl overflow-hidden bg-[#05050e]">
-        <canvas
-          ref={canvasRef}
-          className="block max-h-[90vh] aspect-[450/700] object-contain"
-        />
+    <div
+      ref={containerRef}
+      className="absolute inset-0 w-full h-full flex items-center justify-center p-4 bg-[#020206]/85 z-10 select-none"
+    >
+      <div className="relative game-canvas-wrapper flex items-center justify-center max-h-[90vh] aspect-[450/700]">
+        <canvas ref={canvasRef} />
 
-        {/* Pause Overlay Screen */}
+        {/* Pause Screen Overlay */}
         {isPaused && (
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-6 pointer-events-auto">
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center gap-6 pointer-events-auto">
             <div className="text-center font-display">
               <h2 className="text-3xl font-extrabold text-Dipin-cyan Dipin-pulse-cyan tracking-wider">
-                SYSTEM PAUSED
+                GRID SUSPENDED
               </h2>
               <p className="text-xs text-text-secondary mt-1">
-                GRID INTERFACE SUSPENDED
+                PAUSE MODE ACTIVE
               </p>
             </div>
 

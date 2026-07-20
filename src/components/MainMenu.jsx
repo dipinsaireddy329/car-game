@@ -1,112 +1,127 @@
-import React from 'react';
-import { Play, Sun, Moon, CloudRain, Shield, Award, Coins } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Play, Award, BarChart2, Gift, Star, Volume2, HelpCircle } from 'lucide-react';
+import { audio } from '../utils/audio';
 
 function MainMenu({
   highScore,
   totalCoins,
-  weatherMode,
-  setWeatherMode,
-  timeOfDay,
-  setTimeOfDay,
-  onSelectCar
+  themeSetting,
+  setThemeSetting,
+  onSelectCar,
+  onOpenAchievements,
+  onOpenStats,
+  onClaimDaily,
+  dailyClaimable
 }) {
+  const themes = [
+    { id: 'random', name: 'Random', style: 'theme-preview-random' },
+    { id: 'dawn', name: 'Dawn', style: 'theme-preview-dawn' },
+    { id: 'day', name: 'Day', style: 'theme-preview-day' },
+    { id: 'sunset', name: 'Sunset', style: 'theme-preview-sunset' },
+    { id: 'night', name: 'Night', style: 'theme-preview-night' },
+    { id: 'rain', name: 'Rain', style: 'theme-preview-rain' },
+    { id: 'storm', name: 'Storm', style: 'theme-preview-storm' }
+  ];
+
   return (
-    <div className="glass-panel Dipin-glow-cyan p-8 max-w-md w-full cyber-corners flex flex-col gap-6 items-center">
-      {/* Title */}
+    <div className="glass-panel Dipin-glow-cyan p-6 max-w-md w-full cyber-corners flex flex-col gap-5 items-center relative select-none">
+      
+      {/* ── Title Branding ── */}
       <div className="text-center">
         <h1 className="font-display text-4xl font-extrabold text-white tracking-widest Dipin-pulse-cyan">
-          Dipin
+          DIPIN
         </h1>
         <h2 className="font-display text-2xl font-bold text-Dipin-pink tracking-wider Dipin-pulse-pink">
           HIGHWAY RACER
         </h2>
-        <p className="text-[10px] text-text-secondary mt-1 font-display tracking-widest">
-          SYSTEM VERSION 2.0.46
+        <p className="text-[9px] text-text-secondary mt-1 font-display tracking-widest">
+          GRID REBOOT v2.5.0
         </p>
       </div>
 
-      {/* Statistics */}
-      <div className="w-full grid grid-cols-2 gap-3">
-        <div className="flex items-center gap-3 p-3 bg-slate-950-60 border border-glass-border rounded-lg justify-center">
-          <Award className="text-Dipin-cyan" size={20} />
+      {/* ── Best Score & Coin Bank Stats ── */}
+      <div className="w-full grid grid-cols-2 gap-3 font-display">
+        <div className="flex items-center gap-3 p-2.5 bg-slate-950-60 border border-glass-border rounded-lg justify-center">
+          <Award className="text-Dipin-cyan" size={18} />
           <div className="flex flex-col text-center">
-            <span className="text-[10px] text-text-secondary font-display">BEST SCORE</span>
-            <span className="font-display text-lg font-bold text-white">{highScore}</span>
+            <span className="text-[8px] text-text-secondary">BEST SCORE</span>
+            <span className="text-base font-bold text-white">{highScore}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-3 bg-slate-950-60 border border-glass-border rounded-lg justify-center">
-          <Coins className="text-Dipin-yellow" size={20} />
+        <div className="flex items-center gap-3 p-2.5 bg-slate-950-60 border border-glass-border rounded-lg justify-center">
+          <Star className="text-Dipin-yellow fill-Dipin-yellow" size={18} />
           <div className="flex flex-col text-center">
-            <span className="text-[10px] text-text-secondary font-display">COIN BANK</span>
-            <span className="font-display text-lg font-bold text-Dipin-yellow">{totalCoins}</span>
+            <span className="text-[8px] text-text-secondary">CREDITS</span>
+            <span className="text-base font-bold text-Dipin-yellow">{totalCoins}</span>
           </div>
         </div>
       </div>
 
-      {/* Settings Panel */}
-      <div className="w-full flex flex-col gap-4 border border-glass-border p-4 rounded-lg bg-slate-950-60">
-        <h3 className="font-display text-xs font-bold text-Dipin-purple tracking-wider text-center">
-          GRID PARAMETERS
+      {/* ── 6-Theme Environmental Selection Tiles ── */}
+      <div className="w-full flex flex-col gap-2 border border-glass-border p-3 rounded-lg bg-slate-950-60">
+        <h3 className="font-display text-[9px] font-black text-Dipin-purple tracking-widest text-center">
+          HIGHWAY CORE COORDINATES
         </h3>
-
-        {/* Weather Setting */}
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-text-secondary font-display text-xs">WEATHER</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setWeatherMode('clear')}
-              className={`flex items-center gap-1 text-[11px] font-display px-3 py-1 border rounded transition-all ${weatherMode === 'clear'
-                  ? 'border-Dipin-cyan text-Dipin-cyan bg-Dipin-cyan-dim'
-                  : 'border-glass-border text-text-muted hover:text-white'
-                }`}
+        
+        <div className="grid grid-cols-4 gap-1.5 mt-1">
+          {themes.map(t => (
+            <div
+              key={t.id}
+              onClick={() => {
+                audio.playClick();
+                setThemeSetting(t.id);
+              }}
+              className={`theme-tile ${themeSetting === t.id ? 'selected' : ''}`}
             >
-              <Sun size={12} /> CLEAR
-            </button>
-            <button
-              onClick={() => setWeatherMode('rain')}
-              className={`flex items-center gap-1 text-[11px] font-display px-3 py-1 border rounded transition-all ${weatherMode === 'rain'
-                  ? 'border-Dipin-pink text-Dipin-pink bg-Dipin-pink-dim'
-                  : 'border-glass-border text-text-muted hover:text-white'
-                }`}
-            >
-              <CloudRain size={12} /> STORMY
-            </button>
-          </div>
-        </div>
-
-        {/* Time Setting */}
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-text-secondary font-display text-xs">ENVIRONMENT</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setTimeOfDay('day')}
-              className={`flex items-center gap-1 text-[11px] font-display px-3 py-1 border rounded transition-all ${timeOfDay === 'day'
-                  ? 'border-Dipin-yellow text-Dipin-yellow bg-Dipin-yellow-dim'
-                  : 'border-glass-border text-text-muted hover:text-white'
-                }`}
-            >
-              <Sun size={12} /> SUNSET
-            </button>
-            <button
-              onClick={() => setTimeOfDay('night')}
-              className={`flex items-center gap-1 text-[11px] font-display px-3 py-1 border rounded transition-all ${timeOfDay === 'night'
-                  ? 'border-Dipin-purple text-Dipin-purple bg-Dipin-purple-dim'
-                  : 'border-glass-border text-text-muted hover:text-white'
-                }`}
-            >
-              <Moon size={12} /> DARKNESS
-            </button>
-          </div>
+              <div className={`theme-preview ${t.style}`} />
+              <span className="truncate">{t.name}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Play Button */}
+      {/* ── Utility Buttons (Daily, Achievements, Stats) ── */}
+      <div className="w-full grid grid-cols-3 gap-2">
+        {/* Daily reward button */}
+        <button
+          onClick={onClaimDaily}
+          disabled={!dailyClaimable}
+          className={`Dipin-btn text-[10px] py-2 px-1 gap-1.5 h-11 flex flex-col justify-center border ${
+            dailyClaimable 
+              ? 'border-Dipin-yellow text-Dipin-yellow Dipin-pulse-yellow' 
+              : 'border-glass-border text-text-muted'
+          }`}
+        >
+          <Gift size={14} />
+          <span>DAILY</span>
+        </button>
+
+        {/* Achievements panel */}
+        <button
+          onClick={onOpenAchievements}
+          className="Dipin-btn Dipin-btn-purple text-[10px] py-2 px-1 gap-1.5 h-11 flex flex-col justify-center border"
+        >
+          <Award size={14} />
+          <span>TROPHIES</span>
+        </button>
+
+        {/* Stats panel */}
+        <button
+          onClick={onOpenStats}
+          className="Dipin-btn Dipin-btn-orange text-[10px] py-2 px-1 gap-1.5 h-11 flex flex-col justify-center border"
+        >
+          <BarChart2 size={14} />
+          <span>STATS</span>
+        </button>
+      </div>
+
+      {/* ── Access Garage Action ── */}
       <button
         onClick={onSelectCar}
-        className="Dipin-btn Dipin-btn-cyan w-full flex items-center justify-center gap-2"
+        className="Dipin-btn Dipin-btn-cyan w-full flex items-center justify-center gap-2 py-3"
       >
-        <Play size={18} fill="currentColor" /> ACCESS GARAGE
+        <Play size={16} fill="currentColor" /> ACCESS GARAGE STATION
       </button>
     </div>
   );
