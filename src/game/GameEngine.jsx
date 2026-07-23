@@ -111,6 +111,8 @@ function GameEngine({
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
+    console.log("GameEngine useEffect mounted");
+
     // Instantiate game loop
     const gameLoop = new GameLoop(canvas, selectedCar, {
       carUpgrades,
@@ -132,21 +134,31 @@ function GameEngine({
     gameLoopRef.current = gameLoop;
 
     let lastTime = performance.now();
+    let frameCount = 0;
 
     const tick = (time) => {
-      const deltaTime = (time - lastTime) / 1000;
-      lastTime = time;
+      try {
+        const deltaTime = (time - lastTime) / 1000;
+        lastTime = time;
 
-      // Capped delta to avoid massive glitches on frame drops
-      const cappedDelta = Math.min(0.05, deltaTime);
+        // Capped delta to avoid massive glitches on frame drops
+        const cappedDelta = Math.min(0.05, deltaTime);
 
-      if (!gameLoop.isPaused && !gameLoop.gameOverTriggered) {
-        // Merge keyboard controls with touch controls virtual key map
-        const mergedKeys = { ...keysRef.current, ...touchControls.keys };
-        gameLoop.update(mergedKeys, cappedDelta);
-        gameLoop.draw();
-      } else if (gameLoop.isPaused) {
-        gameLoop.draw();
+        frameCount++;
+        if (frameCount % 60 === 0) {
+          console.log("tick executing, gameLoop.isPaused:", gameLoop.isPaused, "gameOverTriggered:", gameLoop.gameOverTriggered);
+        }
+
+        if (!gameLoop.isPaused && !gameLoop.gameOverTriggered) {
+          // Merge keyboard controls with touch controls virtual key map
+          const mergedKeys = { ...keysRef.current, ...touchControls.keys };
+          gameLoop.update(mergedKeys, cappedDelta);
+          gameLoop.draw();
+        } else if (gameLoop.isPaused) {
+          gameLoop.draw();
+        }
+      } catch (err) {
+        console.error("CRITICAL ERROR IN TICK:", err);
       }
 
       requestRef.current = requestAnimationFrame(tick);
@@ -156,6 +168,7 @@ function GameEngine({
 
     // Cleanup listeners & loops
     return () => {
+      console.log("GameEngine useEffect cleanup");
       cancelAnimationFrame(requestRef.current);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
