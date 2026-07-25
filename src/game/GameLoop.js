@@ -85,9 +85,10 @@ export class GameLoop {
     const handlingLvl = this.options.carUpgrades?.handling || 1;
 
     // Base physics metrics
-    this.baseSpeed = 6;
+    this.baseSpeed = 12; // increased for more noticeable movement
     this.currentSpeed = this.baseSpeed;
-    this.maxNormalSpeed = (12 + (carConfig.speed / 100) * 4) * (1 + (speedLvl - 1) * 0.08);
+    // Adjust maxNormalSpeed proportionally to baseSpeed
+    this.maxNormalSpeed = (24 + (carConfig.speed / 100) * 8) * (1 + (speedLvl - 1) * 0.08);
     this.handlingFactor = (0.07 + (carConfig.handling / 100) * 0.07) * (1 + (handlingLvl - 1) * 0.10);
 
     // Gameplay Core
