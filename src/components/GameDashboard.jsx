@@ -166,10 +166,12 @@ function GameDashboard({
               style={{ borderLeftColor: carColor }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[9px] text-text-secondary">SPEED</span>
-                <span className="font-bold text-white tracking-wider" style={{ textShadow: `0 0 5px ${carColor}` }}>
-                  {kmh} <span className="text-[8px] text-text-secondary">KM/H</span>
-                </span>
+                <div className="speed-gauge glass-panel p-2 border-l-4" style={{ borderLeftColor: carColor }}>
+                  <div className="text-[10px] text-text-secondary mb-1">SPEED</div>
+                  <div className="font-bold text-white tracking-wider Dipin-glow-cyan" style={{ textShadow: `0 0 8px ${carColor}` }}>
+                    {kmh}<span className="text-[8px] text-text-secondary ml-1">KM/H</span>
+                  </div>
+                </div>
               </div>
 
               {/* Fuel canister level */}
