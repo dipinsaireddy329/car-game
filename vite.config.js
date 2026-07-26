@@ -19,15 +19,17 @@ export default defineConfig({
     outDir: 'build',
     assetsDir: 'assets',
     sourcemap: false,
-    // Use esbuild minification (built-in, zero extra deps)
-    minify: 'esbuild',
+    // Use Rolldown's built-in minifier (Vite 8 default, esbuild no longer bundled)
+    minify: true,
     // Warn when individual chunks exceed 500 kB
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
-        // Split vendor libs into a separate chunk for better caching
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
+        // Split react/react-dom into a separate vendor chunk for better caching
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor';
+          }
         },
       },
     },
