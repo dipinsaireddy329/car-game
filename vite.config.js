@@ -1,36 +1,41 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import compression from 'vite-plugin-compression';
 
-// Vite configuration with custom base path, output folder, and compression
+// Vite configuration
+// Note: gzip / brotli compression is handled automatically by Vercel's CDN.
+// No external compression plugin is needed.
 export default defineConfig({
   // Serve the app under the /game/ subdirectory when deployed
   base: '/game/',
+
   plugins: [
     react(),
     tailwindcss(),
-    // Gzip compression
-    compression({
-      verbose: true,
-      disable: false,
-      threshold: 10240,
-      algorithm: 'gzip',
-      ext: '.gz',
-    }),
-    // Brotli compression
-    compression({
-      algorithm: 'brotliCompress',
-      ext: '.br',
-      threshold: 10240,
-    }),
   ],
+
   build: {
-    // Custom output folder for production builds
+    // Custom output folder for production builds (instead of default 'dist')
     outDir: 'build',
     assetsDir: 'assets',
     sourcemap: false,
+    // Use esbuild minification (built-in, zero extra deps)
+    minify: 'esbuild',
+    // Warn when individual chunks exceed 500 kB
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        // Split vendor libs into a separate chunk for better caching
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+        },
+      },
+    },
   },
-  // Preview options can be overridden via CLI (e.g., --port)
-  preview: {},
+
+  // Preview server — run with: npm run preview
+  preview: {
+    port: 5000,
+    strictPort: true,
+  },
 });
