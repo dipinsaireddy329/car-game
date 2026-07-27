@@ -28,6 +28,8 @@ function GameEngine({
   const requestRef = useRef(null);
   const keysRef = useRef({});
   const [isPaused, setIsPaused] = useState(false);
+  // Track which keys are pressed — reset on window blur so stuck keys don't happen
+  const resetKeys = () => { keysRef.current = {}; };
 
   // Responsive scaling to maintain 450:700 aspect ratio
   useEffect(() => {
@@ -93,10 +95,12 @@ function GameEngine({
     // Keyboard handlers for Desktop controls
     const handleKeyDown = (e) => {
       const preventKeys = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '];
-      if (preventKeys.includes(e.key)) {
+      if (preventKeys.includes(e.key) || preventKeys.includes(e.code)) {
         e.preventDefault();
       }
+      // Map both key names for robustness
       keysRef.current[e.key] = true;
+      keysRef.current[e.code] = true;
 
       // Escape or P triggers pausing
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
@@ -106,10 +110,18 @@ function GameEngine({
 
     const handleKeyUp = (e) => {
       keysRef.current[e.key] = false;
+      keysRef.current[e.code] = false;
     };
 
+    // Reset all keys if window loses focus (prevents stuck keys)
+    window.addEventListener('blur', resetKeys);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+
+    // Auto-focus the container so keyboard events are captured immediately
+    if (container) {
+      container.focus();
+    }
 
     console.log("GameEngine useEffect mounted");
 
@@ -172,6 +184,7 @@ function GameEngine({
       cancelAnimationFrame(requestRef.current);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', resetKeys);
       touchControls.detach();
       audio.stopEngine();
       audio.stopRain();
@@ -207,7 +220,9 @@ function GameEngine({
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 w-full h-full flex items-center justify-center p-4 bg-[#020206]/85 z-10 select-none"
+      tabIndex={0}
+      className="absolute inset-0 w-full h-full flex items-center justify-center p-4 bg-[#020206]/85 z-10 select-none outline-none"
+      onFocus={() => { /* keep focus so keyboard events work */ }}
     >
       <div className="relative game-canvas-wrapper flex items-center justify-center max-h-[90vh] aspect-[450/700]">
         <canvas ref={canvasRef} />
