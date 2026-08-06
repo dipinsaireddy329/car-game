@@ -1324,6 +1324,22 @@ export class GameLoop {
     });
   }
 
+  drawFloatingTexts() {
+    const ctx = this.ctx;
+    this.floatingTexts.forEach(ft => {
+      if (!ft.active) return;
+      ctx.save();
+      ctx.globalAlpha = ft.alpha;
+      ctx.font = 'bold 13px monospace';
+      ctx.fillStyle = ft.color;
+      ctx.shadowColor = ft.color;
+      ctx.shadowBlur = 8;
+      ctx.textAlign = 'center';
+      ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.restore();
+    });
+  }
+
   drawRain() {
     const ctx = this.ctx;
     ctx.strokeStyle = this.theme.heavyStorm ? 'rgba(150, 190, 255, 0.4)' : 'rgba(174, 219, 255, 0.25)';
