@@ -64,9 +64,9 @@ export class GameLoop {
     this.carConfig = carConfig;
     this.options = options;
 
-    // Canvas resolution
-    this.width = canvas.width;
-    this.height = canvas.height;
+    // Canvas resolution (Logical virtual coordinate space)
+    this.width = 450;
+    this.height = 700;
 
     // Road Dimensions & Layout
     this.roadLeft = 55;
@@ -458,7 +458,13 @@ export class GameLoop {
 
   draw() {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, this.width, this.height);
+    
+    // Clear entire backing canvas
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    ctx.save();
+    // Scale logical coordinate space (450x700) to actual canvas resolution
+    ctx.scale(this.canvas.width / this.width, this.canvas.height / this.height);
 
     // Nitro Zoom Transform
     if (Math.abs(this.warpScale - 1.0) > 0.001) {
@@ -517,6 +523,8 @@ export class GameLoop {
 
     // Ambient Lighting Overlay
     this.drawAmbientLighting();
+
+    ctx.restore(); // Restore device scale
   }
 
   // ───────────────────────────────────────────────────────────────────────────

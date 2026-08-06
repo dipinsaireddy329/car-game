@@ -19,15 +19,22 @@ function GameDashboard({
   onQuit
 }) {
   const [isMobile, setIsMobile] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
+  const [gyroSensitivity, setGyroSensitivity] = useState(1.0);
 
-  // Detect mobile view based on width
   useEffect(() => {
-    const checkMobile = () => {
+    touchControls.gyroSensitivity = gyroSensitivity;
+  }, [gyroSensitivity]);
+
+  // Detect mobile viewport and touch capability
+  useEffect(() => {
+    const checkViewport = () => {
       setIsMobile(window.innerWidth < 768);
+      setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    checkViewport();
+    window.addEventListener('resize', checkViewport);
+    return () => window.removeEventListener('resize', checkViewport);
   }, []);
 
   // Convert speed ratio to simulated km/h
@@ -139,26 +146,71 @@ function GameDashboard({
         
         {/* LEFT BOTTOM COLUMN: Touch Steering OR Telemetry */}
         <div className="pointer-events-auto flex items-end">
-          {isMobile ? (
-            /* Mobile steer arrow touch widgets */
-            <div className="flex gap-2 select-none">
-              <div
-                onTouchStart={() => touchControls.setLeft(true)}
-                onTouchEnd={() => touchControls.setLeft(false)}
-                onTouchCancel={() => touchControls.setLeft(false)}
-                className="touch-btn touch-btn-steer flex items-center justify-center"
-              >
-                <ChevronLeft size={28} />
+          {isTouch ? (
+            gyroscopeEnabled ? (
+              /* Gyro calibration & sensitivity adjust widgets */
+              <div className="flex flex-col gap-1.5 p-2 bg-slate-950/80 border border-glass-border rounded-lg text-xs font-display select-none">
+                <span className="text-[7px] text-text-secondary text-center tracking-widest font-black">GYRO COORDINATOR</span>
+                <div className="flex gap-2 items-center">
+                  <button
+                    onClick={() => {
+                      touchControls.calibrateGyro();
+                    }}
+                    className="Dipin-btn Dipin-btn-cyan text-[8px] py-1 px-2.5 min-h-0 h-8 flex items-center justify-center font-bold"
+                  >
+                    CALIBRATE
+                  </button>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[6.5px] text-text-secondary">SENSITIVITY</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          audio.playClick();
+                          const nextSens = Math.max(0.5, gyroSensitivity - 0.25);
+                          setGyroSensitivity(nextSens);
+                        }}
+                        className="w-5 h-5 flex items-center justify-center border border-glass-border rounded text-[9px] font-bold text-white bg-slate-900/60"
+                      >
+                        -
+                      </button>
+                      <span className="text-[9px] font-bold text-Dipin-cyan min-w-[24px] text-center">
+                        {gyroSensitivity.toFixed(2)}x
+                      </span>
+                      <button
+                        onClick={() => {
+                          audio.playClick();
+                          const nextSens = Math.min(3.0, gyroSensitivity + 0.25);
+                          setGyroSensitivity(nextSens);
+                        }}
+                        className="w-5 h-5 flex items-center justify-center border border-glass-border rounded text-[9px] font-bold text-white bg-slate-900/60"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div
-                onTouchStart={() => touchControls.setRight(true)}
-                onTouchEnd={() => touchControls.setRight(false)}
-                onTouchCancel={() => touchControls.setRight(false)}
-                className="touch-btn touch-btn-steer flex items-center justify-center"
-              >
-                <ChevronRight size={28} />
+            ) : (
+              /* Mobile steer arrow touch widgets */
+              <div className="flex gap-2 select-none">
+                <div
+                  onTouchStart={() => touchControls.setLeft(true)}
+                  onTouchEnd={() => touchControls.setLeft(false)}
+                  onTouchCancel={() => touchControls.setLeft(false)}
+                  className="touch-btn touch-btn-steer flex items-center justify-center"
+                >
+                  <ChevronLeft size={28} />
+                </div>
+                <div
+                  onTouchStart={() => touchControls.setRight(true)}
+                  onTouchEnd={() => touchControls.setRight(false)}
+                  onTouchCancel={() => touchControls.setRight(false)}
+                  className="touch-btn touch-btn-steer flex items-center justify-center"
+                >
+                  <ChevronRight size={28} />
+                </div>
               </div>
-            </div>
+            )
           ) : (
             /* Desktop Telemetry Widget */
             <div
@@ -244,7 +296,7 @@ function GameDashboard({
 
         {/* RIGHT BOTTOM COLUMN: Touch Nitro/Brake OR Desktop Keyboard Hint */}
         <div className="pointer-events-auto flex items-end">
-          {isMobile ? (
+          {isTouch ? (
             /* Mobile touch pads (Nitro, Brake) */
             <div className="flex gap-2 select-none">
               <div

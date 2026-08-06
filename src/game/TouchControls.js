@@ -48,8 +48,9 @@ class TouchControlsManager {
     // Gyroscope
     this.gyroEnabled       = false;
     this._gyroPermGranted  = false;
-    this._betaRef          = null;  // initial device beta when gyro was enabled
+    this._calibrationRef   = null;  // calibrated reference angle
     this._gyroDeadzone     = 4;     // degrees of tilt before steering kicks in
+    this.gyroSensitivity   = 1.0;   // tilt sensitivity multiplier
     this._gyroTiltLeft     = false;
     this._gyroTiltRight    = false;
 
@@ -124,14 +125,42 @@ class TouchControlsManager {
     }
 
     this._enableGyro();
+    this._calibrationRef = null; // trigger calibration on next reading
     return true;
   }
 
+  /** Force recalculate of reference tilt baseline */
+  calibrateGyro() {
+    this._calibrationRef = null;
+    this.triggerVibrate(60);
+  }
+
+  /** Trigger mobile haptic vibration feedback */
+  triggerVibrate(duration = 40) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(duration);
+      } catch (e) {}
+    }
+  }
+
   /** Set steering keys from an external button (for HUD buttons) */
-  setLeft(active)  { this.keys.ArrowLeft  = active; }
-  setRight(active) { this.keys.ArrowRight = active; }
-  setBrake(active) { this.keys.ArrowDown  = active; }
-  setNitro(active) { this.keys[' ']       = active; }
+  setLeft(active)  {
+    if (active && !this.keys.ArrowLeft) this.triggerVibrate(35);
+    this.keys.ArrowLeft  = active;
+  }
+  setRight(active) {
+    if (active && !this.keys.ArrowRight) this.triggerVibrate(35);
+    this.keys.ArrowRight = active;
+  }
+  setBrake(active) {
+    if (active && !this.keys.ArrowDown) this.triggerVibrate(40);
+    this.keys.ArrowDown  = active;
+  }
+  setNitro(active) {
+    if (active && !this.keys[' ']) this.triggerVibrate(50);
+    this.keys[' ']       = active;
+  }
 
   // ───────────────────────────────────────────────────────────────────────────
   // TOUCH EVENT HANDLERS
@@ -245,7 +274,7 @@ class TouchControlsManager {
 
   _enableGyro() {
     this.gyroEnabled = true;
-    this._betaRef    = null; // calibrate on first reading
+    this._calibrationRef = null; // calibrate on first reading
     window.addEventListener('deviceorientation', this._onOrientation);
   }
 
@@ -259,18 +288,33 @@ class TouchControlsManager {
   }
 
   _onOrientation(e) {
-    // `gamma` = left/right tilt (-90 to +90 degrees)
-    const gamma = e.gamma ?? 0;
+    let tilt = 0;
+    // Get device orientation angle: 0 = Portrait, 90 = Landscape Left, -90/270 = Landscape Right
+    const orientation = window.orientation ?? (screen.orientation && screen.orientation.angle) ?? 0;
 
-    // Calibrate on first reading
-    if (this._betaRef === null) {
-      this._betaRef = gamma;
+    if (orientation === 90) {
+      // Landscape left: beta is the primary steering axis
+      tilt = -e.beta;
+    } else if (orientation === -90 || orientation === 270) {
+      // Landscape right: beta is the primary steering axis (inverted)
+      tilt = e.beta;
+    } else {
+      // Portrait: gamma is the primary steering axis
+      tilt = e.gamma;
     }
 
-    const tilt = gamma - this._betaRef;
+    if (this._calibrationRef === null) {
+      this._calibrationRef = tilt;
+    }
 
-    this._gyroTiltLeft  = tilt < -this._gyroDeadzone;
-    this._gyroTiltRight = tilt >  this._gyroDeadzone;
+    const relativeTilt = tilt - this._calibrationRef;
+    const adjustedDeadzone = this._gyroDeadzone;
+
+    // Apply sensitivity multiplier
+    const effectiveTilt = relativeTilt * this.gyroSensitivity;
+
+    this._gyroTiltLeft  = effectiveTilt < -adjustedDeadzone;
+    this._gyroTiltRight = effectiveTilt > adjustedDeadzone;
     this._syncGyroKeys();
   }
 

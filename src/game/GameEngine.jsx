@@ -31,39 +31,6 @@ function GameEngine({
   // Track which keys are pressed — reset on window blur so stuck keys don't happen
   const resetKeys = () => { keysRef.current = {}; };
 
-  // Responsive scaling to maintain 450:700 aspect ratio
-  useEffect(() => {
-    const handleResize = () => {
-      const canvas = canvasRef.current;
-      const container = containerRef.current;
-      if (!canvas || !container) return;
-
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
-
-      const aspectRatio = 450 / 700;
-      let newWidth = containerWidth;
-      let newHeight = containerWidth / aspectRatio;
-
-      if (newHeight > containerHeight) {
-        newHeight = containerHeight;
-        newWidth = containerHeight * aspectRatio;
-      }
-
-      canvas.style.width = `${newWidth}px`;
-      canvas.style.height = `${newHeight}px`;
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-    handleResize(); // Initial call
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
-
   // Gyroscope toggle updates
   useEffect(() => {
     if (gyroscopeEnabled) {
@@ -85,9 +52,30 @@ function GameEngine({
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    // Set stable coordinate resolution
-    canvas.width = 450;
-    canvas.height = 700;
+    const handleResize = () => {
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      const aspectRatio = 450 / 700;
+      let newWidth = containerWidth;
+      let newHeight = containerWidth / aspectRatio;
+
+      if (newHeight > containerHeight) {
+        newHeight = containerHeight;
+        newWidth = containerHeight * aspectRatio;
+      }
+
+      canvas.style.width = `${newWidth}px`;
+      canvas.style.height = `${newHeight}px`;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = newWidth * dpr;
+      canvas.height = newHeight * dpr;
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    handleResize(); // Initial resize sizing call
 
     // Attach mobile touch handler
     touchControls.attach(canvas, container);
@@ -185,6 +173,8 @@ function GameEngine({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', resetKeys);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
       touchControls.detach();
       audio.stopEngine();
       audio.stopRain();
