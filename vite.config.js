@@ -6,8 +6,8 @@ import tailwindcss from '@tailwindcss/vite';
 // Note: gzip / brotli compression is handled automatically by Vercel's CDN.
 // No external compression plugin is needed.
 export default defineConfig({
-  // Serve the app under the /game/ subdirectory when deployed
-  base: '/game/',
+  // Serve the app from the root when deployed
+  base: '/',
 
   plugins: [
     react(),
